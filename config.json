@@ -1,0 +1,392 @@
+{
+  "fields_to_extract": [
+    {
+      "name": "產品型號",
+      "keywords": ["產品型號 Part No.", "Part No."],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "產品名稱",
+      "keywords": ["產品名稱 Description", "Description"],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "圖面版次",
+      "keywords": ["產品圖面版次 Drawing Rev.", "Drawing Rev."],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "模具編號",
+      "keywords": ["模具編號Mold No.", "Mold No."],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "模具穴數",
+      "keywords": ["模具穴數 Cavitation", "Cavitation"],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "射出成型機編號",
+      "keywords": ["射出成型機編號 Press No.", "Press No."],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "射出成型機噸數",
+      "keywords": ["射出成型機噸數 Press Tonnage ( ton )", "Press Tonnage ( ton )"],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "螺桿尺寸",
+      "keywords": ["螺桿尺寸 Screw Diameter ( mm )", "Screw Diameter ( mm )"],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "螺桿形式",
+      "keywords": ["螺桿形式 Screw type", "Screw type"],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "原料料號",
+      "keywords": ["原料料號 Material description", "原料料號 RAW Material No.", "Material description", "RAW Material No."],
+      "extraction_method": "find_material_number"
+    },
+    {
+      "name": "烘料條件",
+      "keywords": ["Drying Condition", "烘料條件"],
+      "extraction_method": "find_text_after"
+    },
+    {
+      "name": "實際融膠溫度_目標值",
+      "keywords": ["實際融膠溫度 ACTUAL PLASTIC MELT TEMPERATURE"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "實際融膠溫度_下限值",
+      "keywords": ["實際融膠溫度 ACTUAL PLASTIC MELT TEMPERATURE"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "實際融膠溫度_上限值",
+      "keywords": ["實際融膠溫度 ACTUAL PLASTIC MELT TEMPERATURE"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "填充時間_目標值",
+      "keywords": ["填充時間 FILL TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "填充時間_下限值",
+      "keywords": ["填充時間 FILL TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "填充時間_上限值",
+      "keywords": ["填充時間 FILL TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "充填階段的產品平均重量_目標值",
+      "keywords": ["充填階段的產品平均重量 AVERAGE FILL ONLY PART WEIGHT"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "充填階段的產品平均重量_下限值",
+      "keywords": ["充填階段的產品平均重量 AVERAGE FILL ONLY PART WEIGHT"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "充填階段的產品平均重量_上限值",
+      "keywords": ["充填階段的產品平均重量 AVERAGE FILL ONLY PART WEIGHT"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "保壓壓力_目標值",
+      "keywords": ["保壓壓力 HOLD PRESSURE"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "保壓壓力_下限值",
+      "keywords": ["保壓壓力 HOLD PRESSURE"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "保壓壓力_上限值",
+      "keywords": ["保壓壓力 HOLD PRESSURE"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "保壓時間_目標值",
+      "keywords": ["保壓時間 HOLD TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "保壓時間_下限值",
+      "keywords": ["保壓時間 HOLD TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "保壓時間_上限值",
+      "keywords": ["保壓時間 HOLD TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "保壓完的產品平均重量_目標值",
+      "keywords": ["保壓完的產品平均重量 AVERAGE PACKED OUT PART WEIGHT"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "保壓完的產品平均重量_下限值",
+      "keywords": ["保壓完的產品平均重量 AVERAGE PACKED OUT PART WEIGHT"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "保壓完的產品平均重量_上限值",
+      "keywords": ["保壓完的產品平均重量 AVERAGE PACKED OUT PART WEIGHT"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "冷卻時間_目標值",
+      "keywords": ["冷卻時間 MACHINE COOLING TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "冷卻時間_下限值",
+      "keywords": ["冷卻時間 MACHINE COOLING TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "冷卻時間_上限值",
+      "keywords": ["冷卻時間 MACHINE COOLING TIME"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "模具溫度設定-母模_目標值",
+      "keywords": ["MOLD WATER TEMP A-SIDE", "模具溫度設定-母模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "模具溫度設定-母模_下限值",
+      "keywords": ["MOLD WATER TEMP A-SIDE", "模具溫度設定-母模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "模具溫度設定-母模_上限值",
+      "keywords": ["MOLD WATER TEMP A-SIDE", "模具溫度設定-母模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "模具溫度設定-母模_實際值",
+      "keywords": ["MOLD WATER TEMP A-SIDE", "模具溫度設定-母模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "實際值",
+        "value_type": "actual"
+      }
+    },
+    {
+      "name": "模具溫度設定-公模_目標值",
+      "keywords": ["MOLD WATER TEMP B-SIDE", "模具溫度設定-公模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "模具溫度設定-公模_下限值",
+      "keywords": ["MOLD WATER TEMP B-SIDE", "模具溫度設定-公模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "模具溫度設定-公模_上限值",
+      "keywords": ["MOLD WATER TEMP B-SIDE", "模具溫度設定-公模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "模具溫度設定-公模_實際值",
+      "keywords": ["MOLD WATER TEMP B-SIDE", "模具溫度設定-公模"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "實際值",
+        "value_type": "actual"
+      }
+    },
+    {
+      "name": "模具溫度設定-滑塊_目標值",
+      "keywords": ["MOLD WATER TEMP SLIDE", "模具溫度設定-滑塊"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "模具溫度設定-滑塊_下限值",
+      "keywords": ["MOLD WATER TEMP SLIDE", "模具溫度設定-滑塊"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "下限值",
+        "value_type": "low"
+      }
+    },
+    {
+      "name": "模具溫度設定-滑塊_上限值",
+      "keywords": ["MOLD WATER TEMP SLIDE", "模具溫度設定-滑塊"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "上限值",
+        "value_type": "high"
+      }
+    },
+    {
+      "name": "模具溫度設定-滑塊_實際值",
+      "keywords": ["MOLD WATER TEMP SLIDE", "模具溫度設定-滑塊"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "實際值",
+        "value_type": "actual"
+      }
+    },
+    {
+      "name": "充填階段的模重_目標值",
+      "keywords": ["FILL ONLY SHOT WEIGHT", "充填階段的模重"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "保壓完的模重_目標值",
+      "keywords": ["PACKED OUT SHOT WEIGHT", "保壓完的模重"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "鎖模力_目標值",
+      "keywords": ["CLAMP TONNAGE", "鎖模力"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    },
+    {
+      "name": "週期時間_目標值",
+      "keywords": ["MOLD CYCLE TIME", "週期時間"],
+      "extraction_method": "find_table_value",
+      "parameters": {
+        "column": "目標值",
+        "value_type": "target"
+      }
+    }
+  ]
+}

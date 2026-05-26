@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPOV Premium Extractor & Specification Manager</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="glass-bg-blur"></div>
+    
+    <header class="app-header">
+        <div class="header-logo">
+            <i class="fa-solid fa-microchip-heading logo-icon"></i>
+            <div>
+                <h1>PPOV <span>Molding Extractor</span></h1>
+                <p>數位射出成型報告解析與規格單總表管理系統</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <!-- 隱藏的原生檔案選擇器，由按鈕觸發，無需 tkinter -->
+            <input type="file" id="inputMasterFile" accept=".xlsx,.json" style="display:none;">
+            <button id="btnLoadMasterFile" class="btn btn-secondary">
+                <i class="fa-solid fa-file-excel"></i> 載入現有總表
+            </button>
+            <button id="btnSelectFolder" class="btn btn-secondary">
+                <i class="fa-solid fa-folder-open"></i> 選擇資料夾
+            </button>
+            <button id="btnStartExtract" class="btn btn-primary" disabled>
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 開始提取
+            </button>
+        </div>
+    </header>
+
+    <main class="app-main-layout">
+        <!-- LEFT PANEL: CONTROLS & MASTER TABLE -->
+        <section class="left-panel">
+            <div class="card status-card">
+                <div class="status-info">
+                    <span class="status-label">目前資料夾:</span>
+                    <span id="txtCurrentFolder" class="status-value">尚未選擇資料夾...</span>
+                </div>
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span>正在提取 PDF 檔案...</span>
+                        <span id="txtProgressPercent">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GitHub Sync Git Operation UI Card -->
+            <div class="card git-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-brands fa-github"></i> GitHub 倉儲同步
+                    </div>
+                    <span id="gitBadgeStatus" class="badge">正在偵測...</span>
+                </div>
+                <div class="git-body">
+                    <div class="git-info-row">
+                        <span class="git-label">遠端網址:</span>
+                        <span id="txtGitRemote" class="git-value">正在讀取...</span>
+                    </div>
+                    <div class="git-info-row">
+                        <span class="git-label">分支與變更:</span>
+                        <span id="txtGitStatus" class="git-value">正在讀取...</span>
+                    </div>
+                    <div class="git-action-form">
+                        <input type="text" id="inputCommitMsg" class="git-input" placeholder="請輸入 Commit 提交訊息..." value="feat: 優化 Web 數據載入、效能與子進程資料夾選擇">
+                        <button id="btnGitPush" class="btn btn-primary btn-block">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> 執行軟體確效並推送
+                        </button>
+                    </div>
+                    <div id="gitLogDetails" class="git-log-details" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="card master-table-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-list-check"></i> 數據匯總表 (Master Table)
+                        <span id="badgeCount" class="badge">0</span>
+                    </div>
+                    <div class="card-actions" id="masterExportGroup" style="display: none;">
+                        <button id="btnExportExcel" class="btn btn-sm btn-success">
+                            <i class="fa-solid fa-file-excel"></i> 匯出總表 Excel
+                        </button>
+                        <button id="btnExportJson" class="btn btn-sm btn-json">
+                            <i class="fa-solid fa-file-code"></i> 匯出 JSON
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="inputSearch" placeholder="輸入產品型號 (品號) 或名稱篩選..." disabled>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="tableMaster">
+                        <thead>
+                            <tr>
+                                <th>產品型號 (品號)</th>
+                                <th>產品名稱</th>
+                                <th>版次</th>
+                                <th>模具編號</th>
+                                <th>機台編號</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyMaster">
+                            <tr>
+                                <td colspan="5" class="empty-table-state">
+                                    <i class="fa-solid fa-file-import empty-icon"></i>
+                                    <p>請選擇資料夾並匯入 PDF 檔案以顯示數據</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: DETAILED SPECIFICATION SHEET -->
+        <section class="right-panel">
+            <div id="blankPartState" class="card blank-part-card">
+                <i class="fa-solid fa-file-circle-question illustration-icon"></i>
+                <h3>品號規格單預覽</h3>
+                <p>請從左側彙總表中選擇一個品號，以在此處渲染類似官方 PDF 格式的射出成型製程規格表單，並可將其一鍵匯出為精美的 Excel 表單。</p>
+            </div>
+
+            <div id="partSpecCard" class="card part-spec-card" style="display: none;">
+                <div class="spec-card-header">
+                    <div class="spec-title">
+                        <i class="fa-solid fa-file-invoice spec-header-icon"></i>
+                        <div>
+                            <h2 id="txtSpecPartNo">A02-210-251</h2>
+                            <p>品號專屬製程規格單</p>
+                        </div>
+                    </div>
+                    <button id="btnExportPartSpec" class="btn btn-success">
+                        <i class="fa-solid fa-file-arrow-down"></i> 匯出此品號 Excel
+                    </button>
+                </div>
+
+                <div class="spec-sheet-wrapper">
+                    <!-- SECTION 1: BASIC INFORMATION -->
+                    <div class="spec-section">
+                        <h4 class="spec-section-title"><i class="fa-solid fa-circle-info"></i> 基本資訊 (Basic Info)</h4>
+                        <div class="spec-grid">
+                            <div class="grid-item"><span class="grid-label">產品型號:</span> <span id="specPartNo" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">產品名稱:</span> <span id="specPartName" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">圖面版次:</span> <span id="specDrawingRev" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">模具編號:</span> <span id="specMoldNo" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">模具穴數:</span> <span id="specCavitation" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">成型機編號:</span> <span id="specPressNo" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">成型機噸數:</span> <span id="specPressTonnage" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">螺桿尺寸:</span> <span id="specScrewDia" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">螺桿形式:</span> <span id="specScrewType" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">原料料號:</span> <span id="specMaterialNo" class="grid-value">-</span></div>
+                            <div class="grid-item"><span class="grid-label">烘料條件:</span> <span id="specDryingCond" class="grid-value">-</span></div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: PROCESS PARAMETERS -->
+                    <div class="spec-section">
+                        <h4 class="spec-section-title"><i class="fa-solid fa-sliders"></i> 關鍵製程參數 (Process Parameters)</h4>
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th>製程參數項目</th>
+                                    <th>目標值</th>
+                                    <th>下限值</th>
+                                    <th>上限值</th>
+                                    <th>實際值</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>實際融膠溫度 (℃)</td>
+                                    <td id="td_melt_t">-</td><td id="td_melt_l">-</td><td id="td_melt_h">-</td><td id="td_melt_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>填充時間 (s)</td>
+                                    <td id="td_fill_t">-</td><td id="td_fill_l">-</td><td id="td_fill_h">-</td><td id="td_fill_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>產品充填重量 (g)</td>
+                                    <td id="td_fillw_t">-</td><td id="td_fillw_l">-</td><td id="td_fillw_h">-</td><td id="td_fillw_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>保壓壓力 (bar)</td>
+                                    <td id="td_holdp_t">-</td><td id="td_holdp_l">-</td><td id="td_holdp_h">-</td><td id="td_holdp_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>保壓時間 (s)</td>
+                                    <td id="td_holdt_t">-</td><td id="td_holdt_l">-</td><td id="td_holdt_h">-</td><td id="td_holdt_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>保壓完產品重量 (g)</td>
+                                    <td id="td_packw_t">-</td><td id="td_packw_l">-</td><td id="td_packw_h">-</td><td id="td_packw_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>冷卻時間 (s)</td>
+                                    <td id="td_cool_t">-</td><td id="td_cool_l">-</td><td id="td_cool_h">-</td><td id="td_cool_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>模具溫度設定-母模 (℃)</td>
+                                    <td id="td_tempa_t">-</td><td id="td_tempa_l">-</td><td id="td_tempa_h">-</td><td id="td_tempa_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>模具溫度設定-公模 (℃)</td>
+                                    <td id="td_tempb_t">-</td><td id="td_tempb_l">-</td><td id="td_tempb_h">-</td><td id="td_tempb_a">-</td>
+                                </tr>
+                                <tr>
+                                    <td>模具溫度設定-滑塊 (℃)</td>
+                                    <td id="td_temps_t">-</td><td id="td_temps_l">-</td><td id="td_temps_h">-</td><td id="td_temps_a">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- SECTION 3: REFERENCE PARAMETERS -->
+                    <div class="spec-section">
+                        <h4 class="spec-section-title"><i class="fa-solid fa-compass"></i> 參考規格參數 (Reference Parameters)</h4>
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th>參考規格參數項目</th>
+                                    <th>參考值 (Reference)</th>
+                                    <th>查檢值 (Check Record)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>充填階段模重 Fill Only Shot Weight (g)</td>
+                                    <td id="refFillShotWeight">-</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>保壓完模重 Packed Out Shot Weight (g)</td>
+                                    <td id="refPackedShotWeight">-</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>鎖模力設定 Clamp Tonnage (ton)</td>
+                                    <td id="refClampTonnage">-</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>生產週期時間 Mold Cycle Time (s)</td>
+                                    <td id="refCycleTime">-</td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>&copy; 2026 PPOV Molding Extractor. Author: Wesley Chang @ Mouldex, 2026. QC Dept. | Senior Full-stack Architecture & Digital Art Direction.</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
