@@ -11,6 +11,40 @@ document.addEventListener("DOMContentLoaded", () => {
     // Environment detection for GitHub Pages or local static file
     const isStaticMode = window.location.hostname.endsWith("github.io") || window.location.protocol === "file:";
 
+    async function saveBlobWithPathPrompt(blob, suggestedName, format) {
+        if (!window.showSaveFilePicker) {
+            alert("此瀏覽器無法在匯出前詢問儲存路徑。\n\n請使用 Microsoft Edge / Google Chrome 開啟，或改用 Python 本機版匯出。");
+            return false;
+        }
+
+        const pickerTypes = format === "json"
+            ? [{
+                description: "JSON Files",
+                accept: { "application/json": [".json"] }
+            }]
+            : [{
+                description: "Excel Files",
+                accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] }
+            }];
+
+        try {
+            const fileHandle = await window.showSaveFilePicker({
+                suggestedName,
+                types: pickerTypes
+            });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            alert(`檔案已儲存：\n${fileHandle.name}`);
+            return true;
+        } catch (error) {
+            if (error && error.name === "AbortError") {
+                return false;
+            }
+            throw error;
+        }
+    }
+
     if (isStaticMode) {
         // Show premium visual tip for static mode
         setTimeout(() => {
@@ -525,26 +559,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     const buffer = await workbook.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "PPOV_Master_Table.xlsx";
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
+                    await saveBlobWithPathPrompt(blob, "PPOV_Master_Table.xlsx", "excel");
                 } catch (e) {
                     alert("本地導出總表 Excel 失敗");
                 }
             } else {
                 const content = JSON.stringify(state.items, null, 2);
                 const blob = new Blob([content], { type: "application/json" });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "PPOV_Master_Table.json";
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                await saveBlobWithPathPrompt(blob, "PPOV_Master_Table.json", "json");
             }
             return;
         }
@@ -882,16 +904,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     verticalCentered: true
                 };
                 
-                // Write workbook to buffer and download
+                // Write workbook to the path selected by the user.
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `PPOV_Spec_${partNo}.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                await saveBlobWithPathPrompt(blob, `PPOV_Spec_${partNo}.xlsx`, "excel");
             } catch (err) {
                 console.error("Client-side Excel generation error:", err);
                 alert("瀏覽器本地生成規格表單失敗");
