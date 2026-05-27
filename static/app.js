@@ -1138,16 +1138,16 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const masterCardActions = document.querySelector(".master-table-card .card-actions");
         if (masterCardActions) {
-            masterCardActions.style.display = "flex"; // Always show action bar for 'Add Part'
+            masterCardActions.style.display = "flex";
             
-            const btnClearDatabase = document.getElementById("btnClearDatabase");
-            const btnExportExcel = document.getElementById("btnExportExcel");
-            const btnExportJson = document.getElementById("btnExportJson");
+            // 角色檢查：僅管理員可视行清空與匯出按鈕
+            const isAdmin = state.user && state.user.role === "admin";
             
             if (totalParts > 0) {
-                if (btnClearDatabase) btnClearDatabase.style.display = "inline-flex";
-                if (btnExportExcel) btnExportExcel.style.display = "inline-flex";
-                if (btnExportJson) btnExportJson.style.display = "inline-flex";
+                // 清空與匯出按鈕僅對管理員顯示
+                if (btnClearDatabase) btnClearDatabase.style.display = isAdmin ? "inline-flex" : "none";
+                if (btnExportExcel) btnExportExcel.style.display = isAdmin ? "inline-flex" : "none";
+                if (btnExportJson) btnExportJson.style.display = isAdmin ? "inline-flex" : "none";
                 inputSearch.disabled = false;
             } else {
                 if (btnClearDatabase) btnClearDatabase.style.display = "none";
@@ -1560,6 +1560,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // 還原所有管理按鈕
             if (btnAddNewPart) btnAddNewPart.style.display = "inline-flex";
             if (btnClearDatabase) btnClearDatabase.style.display = "inline-flex";
+            if (btnExportExcel) btnExportExcel.style.display = "inline-flex";
+            if (btnExportJson) btnExportJson.style.display = "inline-flex";
             if (btnLoadMasterFile) btnLoadMasterFile.style.display = "inline-flex";
             if (btnSelectFolder) btnSelectFolder.style.display = "inline-flex";
             if (btnStartExtract) {
@@ -1573,6 +1575,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // 操作員：隱藏所有敏感管理按鈕與表格動作列
             if (btnAddNewPart) btnAddNewPart.style.display = "none";
             if (btnClearDatabase) btnClearDatabase.style.display = "none";
+            if (btnExportExcel) btnExportExcel.style.display = "none";
+            if (btnExportJson) btnExportJson.style.display = "none";
             if (btnLoadMasterFile) btnLoadMasterFile.style.display = "none";
             if (btnSelectFolder) btnSelectFolder.style.display = "none";
             if (btnStartExtract) btnStartExtract.style.display = "none";
