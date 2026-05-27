@@ -25,16 +25,17 @@ Before pushing:
 
 ## Restore Baseline
 
-The cleanup baseline is stored as Git tag:
+The cleanup baseline is stored as Git tags:
 
 ```text
-restore-baseline-20260527-1000
+restore-baseline-20260527-1000 (Initial v1.4.1 state)
+restore-baseline-20260527-cleanup (Post-cleanup MECE state)
 ```
 
-To inspect it:
+To inspect a tag:
 
 ```powershell
-git show restore-baseline-20260527-1000
+git show restore-baseline-20260527-cleanup
 ```
 
 To recover files from it, prefer targeted restore commands instead of resetting the entire worktree.

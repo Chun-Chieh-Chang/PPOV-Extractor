@@ -1,5 +1,23 @@
 # Development Log
 
+## 2026-05-27 - Workspace MECE Cleanup and Baseline Alignment
+
+### Scope
+
+- **清理與重構**：清除冗餘備份檔 (`main_local_backup.py`、`config_local_backup.json`) 以及過時的 PyInstaller 配置檔 (`build.spec`)。
+- **清除快取**：移除執行階段產生的 `__pycache__/` 快取目錄，確保專案結構符合最嚴格的 MECE 原則。
+- **建立基準點**：建立全新的本地還原基準點（Git 標記：`restore-baseline-20260527-cleanup`），以便日後安全回滾。
+- **文檔更新**：更新開發日誌 (`DEV_LOG.md`) 與維護文檔 (`MAINTENANCE.md`)，精確定義檔案歸類政策。
+
+### Today's Changes Summary
+
+1. **build.spec**：從 Git 追蹤中移除並物理刪除（由 `PPOV-Extractor.spec` 替代）。
+2. **臨時備份**：物理清除因安全 checkout 產生的本地備份檔案。
+3. **快取清理**：刪除 `__pycache__` 確保無殘留。
+4. **開發文檔**：更新 `docs/DEV_LOG.md` 與 `docs/MAINTENANCE.md`。
+
+---
+
 ## 2026-05-27 - v1.4.1 Release and Finalization
 
 ### Scope
