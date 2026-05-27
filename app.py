@@ -136,27 +136,27 @@ def export_part_excel():
     ws.title = f"PPOV - {part_no}"
     ws.views.sheetView[0].showGridLines = True
     
-    # ─── COLOR SYSTEM (Morandi Slate Design) ───
-    NAVY_FILL = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid") # Slate 800
-    HEADER_FILL = PatternFill(start_color="334155", end_color="334155", fill_type="solid") # Slate 700
-    SUBHEADER_FILL = PatternFill(start_color="475569", end_color="475569", fill_type="solid") # Slate 600
-    ACCENT_FILL = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid") # Slate 100
+    # ─── COLOR SYSTEM (Coordinated Ice Blue Light Theme) ───
+    NAVY_FILL = PatternFill(start_color="1A3A5F", end_color="1A3A5F", fill_type="solid") # Deep Navy Blue
+    HEADER_FILL = PatternFill(start_color="3A7CA8", end_color="3A7CA8", fill_type="solid") # Steel Blue
+    SUBHEADER_FILL = PatternFill(start_color="50718C", end_color="50718C", fill_type="solid") # Slate Blue
+    ACCENT_FILL = PatternFill(start_color="F0F7FB", end_color="F0F7FB", fill_type="solid") # Light Ice Blue
     
     # ─── FONTS ───
     title_font = Font(name="Microsoft JhengHei", size=16, bold=True, color="FFFFFF")
     section_font = Font(name="Microsoft JhengHei", size=11, bold=True, color="FFFFFF")
-    label_font = Font(name="Microsoft JhengHei", size=10, bold=True, color="334155")
+    label_font = Font(name="Microsoft JhengHei", size=10, bold=True, color="1A3A5F") # Navy label text
     value_font = Font(name="Microsoft JhengHei", size=10, color="000000")
     header_col_font = Font(name="Microsoft JhengHei", size=10, bold=True, color="FFFFFF")
     
     # Borders
     thin_border = Border(
-        left=Side(style='thin', color='CBD5E1'),
-        right=Side(style='thin', color='CBD5E1'),
-        top=Side(style='thin', color='CBD5E1'),
-        bottom=Side(style='thin', color='CBD5E1')
+        left=Side(style='thin', color='B4D8E7'), # Light Ice Blue Border
+        right=Side(style='thin', color='B4D8E7'),
+        top=Side(style='thin', color='B4D8E7'),
+        bottom=Side(style='thin', color='B4D8E7')
     )
-    double_bottom = Border(bottom=Side(style='double', color='1E293B'))
+    double_bottom = Border(bottom=Side(style='double', color='1A3A5F'))
     
     # Alignments
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)

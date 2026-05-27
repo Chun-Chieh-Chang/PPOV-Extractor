@@ -26,7 +26,7 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.2.0</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
@@ -253,6 +253,64 @@
     <footer class="app-footer">
         <p>&copy; 2026 PPOV Molding Extractor. Author: Wesley Chang @ Mouldex, 2026. QC Dept. | Senior Full-stack Architecture & Digital Art Direction.</p>
     </footer>
+
+    <!-- 系統版本與更新日誌 Modal -->
+    <div id="versionModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-code-branch" style="color: var(--color-accent-blue);"></i> PPOV Extractor 系統更新日誌</h3>
+                <button class="modal-close" id="btnCloseVersion">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="timeline">
+                    <!-- v1.2.0 -->
+                    <div class="timeline-item current">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.2.0 - 冰藍極致視覺與免伺服器雙引擎版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-opt">優化</span>全面導入 MeetingSummary Pro 冰藍莫蘭迪淺色主題，全站符合 WCAG AA/AAA 閱讀對比規範。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>前端免伺服器雙引擎（SheetJS 讀取總表 + ExcelJS 生成規格單），支援靜態託管部署。</li>
+                                <li><span class="timeline-tag tag-opt">清爽</span>移除冗餘 Git 倉儲卡片，介面專注核心工作流。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.1.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.1.0 - 多維參數提取與雙處理緒防凍結版</span>
+                            <span class="timeline-date">2026-05-25</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>新增模溫（母模/公模/滑塊）、週期、鎖模力、模重等 14+ 組關鍵成型規格參數提取。</li>
+                                <li><span class="timeline-tag tag-fix">修正</span>獨立子進程啟動 TKinter 對話框，徹底解決 Flask Request 執行緒 GUI 當機與掛起問題。</li>
+                                <li><span class="timeline-tag tag-fix">修正</span>單目標參考參數雙向探測定位，完美克服跨行錯位與交叉匹配。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.0.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.0.0 - 核心解析發布版</span>
+                            <span class="timeline-date">2026-05-20</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">核心</span>射出成型 PDF 報告製程規格單自動化提取引擎。</li>
+                                <li><span class="timeline-tag tag-new">核心</span>基於 openpyxl 的精美 Excel 查檢表生成與輸出功能。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="static/app.js"></script>
 </body>

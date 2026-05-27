@@ -51,6 +51,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnExportJson = document.getElementById("btnExportJson");
     const btnExportPartSpec = document.getElementById("btnExportPartSpec");
 
+    // Version Control UI Modal Elements
+    const btnVersion = document.getElementById("btnVersion");
+    const versionModal = document.getElementById("versionModal");
+    const btnCloseVersion = document.getElementById("btnCloseVersion");
+
     // Grid specification values
     const specFields = {
         specPartNo: "產品型號",
@@ -92,6 +97,31 @@ document.addEventListener("DOMContentLoaded", () => {
         inputMasterFile.value = ""; // 清空，確保同一檔案可重複選
         inputMasterFile.click();
     });
+
+    // --- SYSTEM VERSION & CHANGELOG MODAL LOGIC ---
+    if (btnVersion && versionModal && btnCloseVersion) {
+        btnVersion.addEventListener("click", () => {
+            versionModal.classList.add("active");
+        });
+
+        btnCloseVersion.addEventListener("click", () => {
+            versionModal.classList.remove("active");
+        });
+
+        // Close when clicking outside of the modal content
+        versionModal.addEventListener("click", (e) => {
+            if (e.target === versionModal) {
+                versionModal.classList.remove("active");
+            }
+        });
+
+        // Close on Escape key press
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && versionModal.classList.contains("active")) {
+                versionModal.classList.remove("active");
+            }
+        });
+    }
 
     // 使用者選好檔案後，自動上傳或在本地解析
     inputMasterFile.addEventListener("change", async () => {
@@ -436,21 +466,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 const worksheet = workbook.addWorksheet(`PPOV - ${partNo}`);
                 worksheet.views = [{ showGridLines: true }];
                 
-                // Color Palette
-                const NAVY_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
-                const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
-                const SUBHEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
-                const ACCENT_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+                // Color Palette (Coordinated Ice Blue Light Theme)
+                const NAVY_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3A5F' } };
+                const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3A7CA8' } };
+                const SUBHEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF50718C' } };
+                const ACCENT_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F7FB' } };
                 
                 // Font styles
                 const title_font = { name: 'Microsoft JhengHei', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
                 const section_font = { name: 'Microsoft JhengHei', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-                const label_font = { name: 'Microsoft JhengHei', size: 10, bold: true, color: { argb: 'FF334155' } };
+                const label_font = { name: 'Microsoft JhengHei', size: 10, bold: true, color: { argb: 'FF1A3A5F' } };
                 const value_font = { name: 'Microsoft JhengHei', size: 10, color: { argb: 'FF000000' } };
                 const header_col_font = { name: 'Microsoft JhengHei', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
                 
                 // Borders
-                const thin_border_side = { style: 'thin', color: { argb: 'FFCBD5E1' } };
+                const thin_border_side = { style: 'thin', color: { argb: 'FFB4D8E7' } };
                 const thin_border = { left: thin_border_side, right: thin_border_side, top: thin_border_side, bottom: thin_border_side };
                 
                 // Alignments
