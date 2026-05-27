@@ -109,6 +109,16 @@ def find_table_value(text, keywords, parameters):
                 for j in range(i, min(i + 4, len(lines))):
                     current_line = lines[j]
                     tokens = re.findall(r'\b\d+\.?\d*\b|NCA|N/A', current_line, re.IGNORECASE)
+                    
+                    # 特殊處理：如果有6個tokens（如保壓壓力有Bar/kg/cm²雙單位），X/Y都顯示
+                    # X是機台顯示值，Y是真實數據（單位是被勾稽的項目）
+                    if len(tokens) == 6 and '/' in current_line:
+                        tokens = [
+                            f"{tokens[0]} / {tokens[1]}",
+                            f"{tokens[2]} / {tokens[3]}",
+                            f"{tokens[4]} / {tokens[5]}"
+                        ]
+                    
                     if len(tokens) >= 3:
                         if value_type == "target":
                             return tokens[0]
