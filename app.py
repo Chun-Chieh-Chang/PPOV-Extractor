@@ -71,6 +71,11 @@ def load_config():
 def index():
     return render_template("index.html")
 
+@app.route("/favicon.ico")
+def favicon():
+    """Silences browser favicon.ico 404 console errors by returning 204 No Content."""
+    return "", 204
+
 @app.route("/api/config", methods=["GET"])
 def get_config_endpoint():
     if not db["config"]:
