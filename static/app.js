@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedItem: null,
         inspectionData: {}, // { partNo: { key: value, ... } }
         isEditMode: false,
+        sortKey: null,
+        sortDirection: "asc", // "asc" or "desc"
     };
 
     // Environment detection for GitHub Pages or local static file
@@ -349,10 +351,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // --- SORTING FUNCTIONS ---
+    function sortData(data, key, direction) {
+        return [...data].sort((a, b) => {
+            const valA = (a[key] || "").toString().toLowerCase();
+            const valB = (b[key] || "").toString().toLowerCase();
+            
+            if (direction === "asc") {
+                return valA.localeCompare(valB, "zh-TW");
+            } else {
+                return valB.localeCompare(valA, "zh-TW");
+            }
+        });
+    }
+
+    function updateSortIcons() {
+        document.querySelectorAll("#tableMaster th.sortable").forEach(th => {
+            const icon = th.querySelector(".sort-icon");
+            const key = th.getAttribute("data-sort-key");
+            
+            if (icon) {
+                icon.className = "fa-solid sort-icon";
+                if (key === state.sortKey) {
+                    icon.className += state.sortDirection === "asc" ? " fa-sort-up" : " fa-sort-down";
+                } else {
+                    icon.className += " fa-sort";
+                }
+            }
+        });
+    }
+
     // --- RENDER MASTER TABLE ---
     function renderMasterTable(data) {
+        let displayData = [...data];
+        
+        if (state.sortKey) {
+            displayData = sortData(displayData, state.sortKey, state.sortDirection);
+        }
+        
         tbodyMaster.innerHTML = "";
-        if (data.length === 0) {
+        if (displayData.length === 0) {
             tbodyMaster.innerHTML = `
                 <tr>
                     <td colspan="5" class="empty-table-state">
@@ -364,7 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        data.forEach(item => {
+        displayData.forEach(item => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td><strong>${item["產品型號"] || "未知"}</strong></td>
@@ -535,6 +573,30 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    // --- SORT TABLE HEADERS ---
+    document.querySelectorAll("#tableMaster th.sortable").forEach(th => {
+        th.addEventListener("click", () => {
+            const key = th.getAttribute("data-sort-key");
+            
+            if (state.sortKey === key) {
+                state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+            } else {
+                state.sortKey = key;
+                state.sortDirection = "asc";
+            }
+            
+            updateSortIcons();
+            
+            const query = inputSearch.value.toLowerCase().trim();
+            const filtered = state.items.filter(item => {
+                const partNo = (item["產品型號"] || "").toLowerCase();
+                const partName = (item["產品名稱"] || "").toLowerCase();
+                return partNo.includes(query) || partName.includes(query);
+            });
+            renderMasterTable(filtered);
+        });
+    });
 
     // --- FILTER & SEARCH ---
     inputSearch.addEventListener("input", (e) => {

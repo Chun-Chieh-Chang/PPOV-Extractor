@@ -372,6 +372,27 @@ th {
     z-index: 10;
 }
 
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: var(--transition-smooth);
+}
+
+th.sortable:hover {
+    background-color: rgba(180, 216, 231, 0.8);
+}
+
+.sort-icon {
+    margin-left: 8px;
+    font-size: 12px;
+    opacity: 0.5;
+    transition: var(--transition-smooth);
+}
+
+th.sortable:hover .sort-icon {
+    opacity: 1;
+}
+
 td {
     border-bottom: 1px solid var(--color-border);
     color: var(--color-text-primary);

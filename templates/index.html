@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.3.1">
+    <link rel="stylesheet" href="static/style.css?v=1.4.0">
 </head>
 <body>
     <div class="glass-bg-container">
@@ -28,7 +28,7 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.3.0</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.4.0</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
@@ -93,11 +93,11 @@
                     <table id="tableMaster">
                         <thead>
                             <tr>
-                                <th>產品型號 (品號)</th>
-                                <th>產品名稱</th>
-                                <th>版次</th>
-                                <th>模具編號</th>
-                                <th>機台編號</th>
+                                <th data-sort-key="產品型號" class="sortable">產品型號 (品號) <i class="fa-solid fa-sort sort-icon"></i></th>
+                                <th data-sort-key="產品名稱" class="sortable">產品名稱 <i class="fa-solid fa-sort sort-icon"></i></th>
+                                <th data-sort-key="圖面版次" class="sortable">版次 <i class="fa-solid fa-sort sort-icon"></i></th>
+                                <th data-sort-key="模具編號" class="sortable">模具編號 <i class="fa-solid fa-sort sort-icon"></i></th>
+                                <th data-sort-key="射出成型機編號" class="sortable">機台編號 <i class="fa-solid fa-sort sort-icon"></i></th>
                             </tr>
                         </thead>
                         <tbody id="tbodyMaster">
@@ -295,8 +295,24 @@
             </div>
             <div class="modal-body">
                 <div class="timeline">
-                    <!-- v1.3.0 -->
+                    <!-- v1.4.0 -->
                     <div class="timeline-item current">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.4.0 - 欄位排序與遞迴子資料夾處理版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>彙總表欄位排序功能，點擊表頭即可按產品型號、名稱、版次、模具編號、機台編號排序。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>排序圖示（向上/向下箭頭），直覺顯示目前排序方向。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>後端支援遞迴處理多層子資料夾，自動搜尋所有子資料夾中的 PDF 檔案。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>排序時保留搜尋篩選結果，兩功能完美結合。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.3.0 -->
+                    <div class="timeline-item">
                         <div class="timeline-badge"></div>
                         <div class="timeline-title">
                             <span>v1.3.0 - 查檢數據即時輸入與 AI 匯入預備版</span>
@@ -360,6 +376,6 @@
         </div>
     </div>
 
-    <script src="static/app.js?v=1.3.1"></script>
+    <script src="static/app.js?v=1.4.0"></script>
 </body>
 </html>
