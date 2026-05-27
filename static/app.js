@@ -438,14 +438,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ format })
             });
             if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = format === "excel" ? "PPOV_Master_Table.xlsx" : "PPOV_Master_Table.json";
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                const resData = await response.json();
+                if (resData.success) {
+                    alert(resData.message);
+                } else {
+                    // Do not alert if user cancelled the saving dialog
+                    if (resData.message !== "已取消儲存操作") {
+                        alert(resData.message);
+                    }
+                }
             } else {
                 alert("總表導出失敗");
             }
@@ -465,6 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet(`PPOV - ${partNo}`);
                 worksheet.views = [{ showGridLines: true }];
+                worksheet.sheetProperties.pageSetUpPr = { fitToPage: true }; // Enforce ExcelJS to serialize pageSetUpPr.fitToPage in sheet xml
                 
                 // Color Palette (Coordinated Ice Blue Light Theme)
                 const NAVY_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3A5F' } };
@@ -650,12 +652,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 footer_cell.font = { name: 'Microsoft JhengHei', size: 8, italic: true, color: { argb: 'FF64748B' } };
                 footer_cell.alignment = { horizontal: 'right', vertical: 'middle' };
                 
-                // Adjust widths
-                worksheet.getColumn(1).width = 38;
-                worksheet.getColumn(2).width = 16;
-                worksheet.getColumn(3).width = 16;
-                worksheet.getColumn(4).width = 16;
-                worksheet.getColumn(5).width = 16;
+                // Set optimized print-safe column widths (Total: 78, perfectly fits A4 portrait width)
+                worksheet.getColumn(1).width = 30;
+                worksheet.getColumn(2).width = 12;
+                worksheet.getColumn(3).width = 12;
+                worksheet.getColumn(4).width = 12;
+                worksheet.getColumn(5).width = 12;
                 
                 // Set Row Heights dynamically only for active rows with content
                 worksheet.getRow(1).height = 40;
@@ -702,14 +704,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ part_no: partNo })
             });
             if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `PPOV_Spec_${partNo}.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                const resData = await response.json();
+                if (resData.success) {
+                    alert(resData.message);
+                } else {
+                    // Do not alert if user cancelled the saving dialog
+                    if (resData.message !== "已取消儲存操作") {
+                        alert(resData.message);
+                    }
+                }
             } else {
                 alert("品號規格單導出失敗");
             }

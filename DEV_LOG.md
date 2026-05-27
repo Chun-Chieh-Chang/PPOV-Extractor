@@ -126,8 +126,13 @@
      * 日誌中設計了縱向時間軸（Timeline），記錄自 `v1.0.0` 至 `v1.2.0`（冰藍極致視覺版）的真實重構歷程。
   3. **全端 Excel 色彩同步**：
      * 修改 `app.py` (`openpyxl`) 與 `app.js` (`ExcelJS`)，將匯出單頁製程查檢表的 Morandi 灰調同步替換為 **`1A3A5F` (主 Navy 藍)**、**`3A7CA8` (Header 鋼鐵藍)**、**`50718C` (次級 Slate 藍)**、**`F0F7FB` (底色冰藍)** 與 **`B4D8E7` (冰藍邊框)**，視覺極致協調。
-  4. **A4 一頁自動列印配置**：
-     * 針對單頁 Excel 查檢表，分別在 `app.py`（openpyxl 的 `page_setup.paperSize = 9`、`fitToPage = True`、`fitToWidth/Height = 1`）與 `static/app.js`（ExcelJS 的 `pageSetup` 屬性）中實施列印佈局配置。
-     * 設定四周 `0.5 inch`（約 1.27 公分）精緻邊距，確保導出報表在任何 Office、WPS 或 PDF 虛擬列印預覽中，皆能自動等比例縮放，完美收納於「單張 A4」範圍內輸出，徹底解決內容跨頁與列印破碎問題。
-  5. **MECE 清理**：
+  4. **A4 一頁自動列印配置與橫向分割修正**：
+     * **根本原因 (RCA)**：發現 Excel 在列印預覽時仍被分割為 `1/2` 頁，實為**橫向列印分割**（第 D、E 兩欄被擠到第二頁）。主因是原本設定的欄寬（A 欄 38，其餘 16，總寬達 102）遠超 A4 直向的可列印寬度限制（約 78-80），且 ExcelJS 在瀏覽器端生成 XML 時，漏掉了 `<pageSetUpPr fitToPage="1"/>` 聲明，導致微軟 Excel 完全忽略了 XML 中的 `fitToPage` 縮放配置。
+     * **解決措施 (CAPA)**：
+       * **精確欄寬最佳化**：將欄寬由 `38, 16, 16, 16, 16` 精緻化微調為 **`30, 12, 12, 12, 12`**（總寬 78），即使在沒有開啟縮放的預設狀態下，整張表格也能 100% 直覺收納在單頁直向 A4 內，完全杜絕橫向分割！
+       * **ExcelJS XML 修正**：在 `static/app.js` 中顯式補上 `worksheet.sheetProperties.pageSetUpPr = { fitToPage: true };`，強行修復 ExcelJS 的序列化 bug，使 Excel 自動啟用 A4 一頁列印縮放。
+  5. **匯出檔案強制詢問儲存路徑 (Native Save Dialogue)**：
+     * **RCA**：網頁端默認的 `fetch -> blob -> a.click()` 會不經詢問直接下載至瀏覽器的預設下載資料夾（通常是 Downloads），無法自定義檔名與路徑。
+     * **CAPA**：在 `main.py` 中新寫了 `_save_file_dialog` 輔助函數（同理利用 python 獨立子進程拉起 `filedialog.asksaveasfilename` 避免執行緒掛起），並重新打通了 `/api/export_master` 與 `/api/export_part` 的儲存機制。當點擊導出時，後端會主動彈出本機檔案儲存對話框，詢問使用者儲存檔名與路徑，寫入成功後返回 JSON 信號。
+  6. **MECE 清理**：
      * 完整刪除專案中所有臨時與冗餘的診斷/對比測試/規則分析 Python 腳本，維護目錄極簡化。

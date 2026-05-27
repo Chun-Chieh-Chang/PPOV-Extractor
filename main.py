@@ -332,6 +332,50 @@ def _select_directory_dialog(title: str, initial_dir: str = None) -> str:
         except Exception:
             return ""
 
+def _save_file_dialog(title: str, default_filename: str, file_types: list) -> str:
+    """顯示檔案儲存對話框，返回使用者選擇的檔案路徑；取消則返回空字串。"""
+    import subprocess
+    import sys
+    try:
+        # 用獨立的 python 子進程開啟 tkinter filedialog.asksaveasfilename
+        file_types_str = str(file_types)
+        cmd = [
+            sys.executable,
+            "-c",
+            "import tkinter as tk; "
+            "from tkinter import filedialog; "
+            "root = tk.Tk(); "
+            "root.withdraw(); "
+            "root.attributes('-topmost', True); "
+            f"print(filedialog.asksaveasfilename(title={repr(title)}, initialfile={repr(default_filename)}, filetypes={file_types_str}))"
+        ]
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = 0x08000000
+            
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            creationflags=creationflags
+        )
+        return result.stdout.strip()
+    except Exception as e:
+        print(f"Subprocess asksaveasfilename error: {e}")
+        if not _TK_AVAILABLE:
+            return ""
+        try:
+            root = _tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            path = _filedialog.asksaveasfilename(title=title, initialfile=default_filename, filetypes=file_types)
+            root.destroy()
+            return path or ""
+        except Exception:
+            return ""
+
+
 
 
 def get_paths():
