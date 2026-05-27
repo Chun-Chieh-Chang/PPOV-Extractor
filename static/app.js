@@ -589,15 +589,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ format })
             });
             if (response.ok) {
-                const resData = await response.json();
-                if (resData.success) {
-                    alert(resData.message);
+                const buffer = await response.arrayBuffer();
+                let mimeType, fileName;
+                if (format === "excel") {
+                    mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                    fileName = "PPOV_Master_Table.xlsx";
                 } else {
-                    // Do not alert if user cancelled the saving dialog
-                    if (resData.message !== "已取消儲存操作") {
-                        alert(resData.message);
-                    }
+                    mimeType = "application/json";
+                    fileName = "PPOV_Master_Table.json";
                 }
+                const blob = new Blob([buffer], { type: mimeType });
+                await saveBlobWithPathPrompt(blob, fileName, format);
             } else {
                 alert("總表導出失敗");
             }
@@ -933,15 +935,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ part_no: partNo, inspection_data: state.inspectionData[partNo] || {} })
             });
             if (response.ok) {
-                const resData = await response.json();
-                if (resData.success) {
-                    alert(resData.message);
-                } else {
-                    // Do not alert if user cancelled the saving dialog
-                    if (resData.message !== "已取消儲存操作") {
-                        alert(resData.message);
-                    }
-                }
+                const buffer = await response.arrayBuffer();
+                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                await saveBlobWithPathPrompt(blob, `PPOV_Spec_${partNo}.xlsx`, "excel");
             } else {
                 alert("品號規格單導出失敗");
             }

@@ -89,64 +89,45 @@ def extract_data():
 
 @app.route("/api/export_master", methods=["POST"])
 def export_master():
-    """Generates and exports the master Excel or JSON file, prompting the user for the save path."""
+    """Generates and exports the master Excel or JSON file in memory."""       
     format_type = request.json.get("format", "excel")
     if not db["extracted_data"]:
-        return jsonify({"success": False, "message": "目前無任何已提取之數據"})
+        return jsonify({"success": False, "message": "目前無任何已提取之數據"}) 
         
     df = pd.DataFrame(db["extracted_data"])
-    # Rearrange column order based on config
     column_order = ["檔案名稱"] + [field["name"] for field in db["config"]["fields_to_extract"]]
     df = df[column_order]
-    
-    # Prompt for save path using Native OS file dialog
-    default_name = f"PPOV_Master_Table.{'xlsx' if format_type == 'excel' else 'json'}"
-    file_types = [("Excel Files", "*.xlsx")] if format_type == "excel" else [("JSON Files", "*.json")]
-    
-    selected_path = _save_file_dialog(
-        "選擇儲存總表檔案的位置", 
-        default_name, 
-        file_types
-    )
-    
-    if not selected_path:
-        return jsonify({"success": False, "message": "已取消儲存操作"})
-        
-    try:
-        if format_type == "excel":
-            df.to_excel(selected_path, index=False, engine='openpyxl')
-        else:
-            with open(selected_path, "w", encoding="utf-8") as f:
-                json.dump(db["extracted_data"], f, ensure_ascii=False, indent=2)
-                
-        return jsonify({"success": True, "message": f"總表已成功儲存至:\n{selected_path}"})
-    except Exception as e:
-        return jsonify({"success": False, "message": f"寫入檔案時發生錯誤：{str(e)}"})
+
+    if format_type == "excel":
+        buffer = io.BytesIO()
+        df.to_excel(buffer, index=False, engine='openpyxl')
+        buffer.seek(0)
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="PPOV_Master_Table.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        content = json.dumps(db["extracted_data"], ensure_ascii=False, indent=2)
+        buffer = io.BytesIO(content.encode("utf-8"))
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="PPOV_Master_Table.json",
+            mimetype="application/json"
+        )
 
 @app.route("/api/export_part", methods=["POST"])
 def export_part_excel():
-    """Generates a highly premium structured Excel sheet for a single part, prompting the user for the save path."""
+    """Generates a highly premium structured Excel sheet for a single part.""" 
     part_no = request.json.get("part_no")
-    inspection_data = request.json.get("inspection_data", {})
     if not part_no:
         return jsonify({"success": False, "message": "請指定品號"})
         
     part_data = next((item for item in db["extracted_data"] if item.get("產品型號") == part_no), None)
     if not part_data:
         return jsonify({"success": False, "message": f"找不到品號 {part_no} 的數據"})
-        
-    # Prompt for save path using Native OS file dialog
-    default_name = f"PPOV_Spec_{part_no}.xlsx"
-    file_types = [("Excel Files", "*.xlsx")]
-    
-    selected_path = _save_file_dialog(
-        f"選擇儲存品號 {part_no} 規格單的位置", 
-        default_name, 
-        file_types
-    )
-    
-    if not selected_path:
-        return jsonify({"success": False, "message": "已取消儲存操作"})
         
     # Generate beautifully styled spreadsheet using openpyxl
     wb = openpyxl.Workbook()
@@ -270,22 +251,8 @@ def export_part_excel():
             cell.font = value_font
             cell.alignment = center_align
             
-        # 實際值 (Column 5) - fill from inspection_data if available
-        actual_key_map = {
-            "實際融膠溫度_實際值": "melt_actual",
-            "填充時間_實際值": "fill_actual",
-            "充填階段的產品平均重量_實際值": "fillw_actual",
-            "保壓壓力_實際值": "holdp_actual",
-            "保壓時間_實際值": "holdt_actual",
-            "保壓完的產品平均重量_實際值": "packw_actual",
-            "冷卻時間_實際值": "cool_actual",
-            "模具溫度設定-母模_實際值": "tempa_actual",
-            "模具溫度設定-公模_實際值": "tempb_actual",
-            "模具溫度設定-滑塊_實際值": "temps_actual",
-        }
-        insp_key = actual_key_map.get(actual_k, "")
-        insp_val = inspection_data.get(insp_key, "") if insp_key else ""
-        cell_actual = ws.cell(row=curr_row, column=5, value=insp_val)
+        # 實際值 (Column 5) 全部留空
+        cell_actual = ws.cell(row=curr_row, column=5, value="")
         cell_actual.font = value_font
         cell_actual.alignment = center_align
             
@@ -321,88 +288,32 @@ def export_part_excel():
         ws.cell(row=curr_row, column=2, value=part_data.get(key, "N/A")).font = value_font
         ws.cell(row=curr_row, column=2).alignment = center_align
         
-        # Column 5: Check Field - fill from inspection_data if available
-        ref_key_map = {
-            "充填階段的模重_目標值": "ref_fill_shot_check",
-            "保壓完的模重_目標值": "ref_packed_shot_check",
-            "鎖模力_目標值": "ref_clamp_check",
-            "週期時間_目標值": "ref_cycle_check",
-        }
-        ref_insp_key = ref_key_map.get(key, "")
-        ref_insp_val = inspection_data.get(ref_insp_key, "") if ref_insp_key else ""
-        ws.cell(row=curr_row, column=5, value=ref_insp_val).font = value_font
+        # Column 5: Blank Check Field (for user inspection)
+        ws.cell(row=curr_row, column=5, value="").font = value_font
         ws.cell(row=curr_row, column=5).alignment = center_align
         
         for c in range(1, 6):
             ws.cell(row=curr_row, column=c).border = thin_border
         curr_row += 1
         
-    # --- 5. 現場生產查檢紀錄 SECTION (Sign-off block) ---
-    ws.merge_cells(start_row=curr_row, start_column=1, end_row=curr_row, end_column=5)
-    check_sec = ws.cell(row=curr_row, column=1, value="  現場生產查檢紀錄 (On-site Inspection Record)")
-    check_sec.font = section_font
-    check_sec.fill = HEADER_FILL
-    check_sec.alignment = Alignment(horizontal="left", vertical="center")
-    curr_row += 1
-
-    # Row 1: Actual Press No. & Date
-    ws.cell(row=curr_row, column=1, value="實際機台編號 Actual Press No.").font = label_font
-    ws.cell(row=curr_row, column=1).alignment = left_align
-    ws.cell(row=curr_row, column=1).fill = ACCENT_FILL
-    ws.cell(row=curr_row, column=1).border = thin_border
-
-    ws.cell(row=curr_row, column=2, value=inspection_data.get("sign_press_no", "")).font = value_font
-    ws.cell(row=curr_row, column=2).border = thin_border
-
-    ws.cell(row=curr_row, column=3, value="查檢日期 Inspection Date").font = label_font
-    ws.cell(row=curr_row, column=3).alignment = left_align
-    ws.cell(row=curr_row, column=3).fill = ACCENT_FILL
-    ws.cell(row=curr_row, column=3).border = thin_border
-
-    ws.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=5)
-    ws.cell(row=curr_row, column=4, value=inspection_data.get("sign_date", "")).font = value_font
-    ws.cell(row=curr_row, column=4).border = thin_border
-    ws.cell(row=curr_row, column=5).border = thin_border
-    curr_row += 1
-
-    # Row 2: Time & Inspector Signature
-    ws.cell(row=curr_row, column=1, value="查檢時間 Inspection Time").font = label_font
-    ws.cell(row=curr_row, column=1).alignment = left_align
-    ws.cell(row=curr_row, column=1).fill = ACCENT_FILL
-    ws.cell(row=curr_row, column=1).border = thin_border
-
-    ws.cell(row=curr_row, column=2, value=inspection_data.get("sign_time", "")).font = value_font
-    ws.cell(row=curr_row, column=2).border = thin_border
-
-    ws.cell(row=curr_row, column=3, value="查檢員簽名 Inspector Signature").font = label_font
-    ws.cell(row=curr_row, column=3).alignment = left_align
-    ws.cell(row=curr_row, column=3).fill = ACCENT_FILL
-    ws.cell(row=curr_row, column=3).border = thin_border
-
-    ws.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=5)
-    ws.cell(row=curr_row, column=4, value=inspection_data.get("sign_inspector", "")).font = value_font
-    ws.cell(row=curr_row, column=4).border = thin_border
-    ws.cell(row=curr_row, column=5).border = thin_border
-    curr_row += 1
-
-    # --- 6. FOOTER SIGNATURE ---
+    # --- 5. FOOTER SIGNATURE ---
     curr_row += 1 # Spacing row
     ws.merge_cells(start_row=curr_row, start_column=1, end_row=curr_row, end_column=5)
     author_cell = ws.cell(row=curr_row, column=1, value="Wesley Chang @ Mouldex, 2026. QC Dept. | PPOV 射出成型數據查檢表")
     author_cell.font = Font(name="Microsoft JhengHei", size=8, italic=True, color="64748B") # Slate 500
     author_cell.alignment = Alignment(horizontal="right", vertical="center")
     
-    # Set optimized print-safe column widths (Total: 102, perfectly scaled to A4 width)
-    ws.column_dimensions['A'].width = 38  # Parameter Label
-    ws.column_dimensions['B'].width = 16  # Target Value
-    ws.column_dimensions['C'].width = 16  # Low Value
-    ws.column_dimensions['D'].width = 16  # High Value
-    ws.column_dimensions['E'].width = 16  # Actual Value/Check Record
+    # Set optimized print-safe column widths (Total: 78, perfectly fits A4 portrait width)
+    ws.column_dimensions['A'].width = 30  # Parameter Label
+    ws.column_dimensions['B'].width = 12  # Target Value
+    ws.column_dimensions['C'].width = 12  # Low Value
+    ws.column_dimensions['D'].width = 12  # High Value
+    ws.column_dimensions['E'].width = 12  # Actual Value/Check Record
     
     # ─── ROW HEIGHTS (Only active rows with content, preventing trailing page overflows) ───
-    ws.row_dimensions[1].height = 52
+    ws.row_dimensions[1].height = 40
     for r in range(2, curr_row + 1):
-        ws.row_dimensions[r].height = 28
+        ws.row_dimensions[r].height = 24
     
     # ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
     ws.page_setup.paperSize = 9  # A4 Paper Size
@@ -413,24 +324,21 @@ def export_part_excel():
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_area = f'A1:E{curr_row}'  # Explicitly restrict print area
     
-    # Set print margins to exactly 0.8 cm (0.31 inches) & set header/footer to 0
-    ws.page_margins.left = 0.31
-    ws.page_margins.right = 0.31
-    ws.page_margins.top = 0.31
-    ws.page_margins.bottom = 0.31
-    ws.page_margins.header = 0.0
-    ws.page_margins.footer = 0.0
-    
-    # Enable horizontal and vertical page centering
-    ws.print_options.horizontalCentered = True
-    ws.print_options.verticalCentered = True
+    # Set elegant margins (0.5 inch / 1.2 cm)
+    ws.page_margins.left = 0.5
+    ws.page_margins.right = 0.5
+    ws.page_margins.top = 0.5
+    ws.page_margins.bottom = 0.5
         
-    # Save workbook to selected path directly
-    try:
-        wb.save(selected_path)
-        return jsonify({"success": True, "message": f"規格單已成功儲存至:\n{selected_path}"})
-    except Exception as e:
-        return jsonify({"success": False, "message": f"寫入檔案時發生錯誤：{str(e)}"})
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f"PPOV_Spec_{part_no}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 @app.route("/api/load_master_file", methods=["POST"])
 def load_master_file():
@@ -489,4 +397,4 @@ if __name__ == "__main__":
     load_config()
     # Start server and auto-launch default browser in a split second
     Timer(1.0, launch_browser).start()
-    app.run(port=5000, debug=False)
+    app.run(port=5000, debug=True)
