@@ -487,11 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const center_align = { horizontal: 'center', vertical: 'middle', wrapText: true };
                 const left_align = { horizontal: 'left', vertical: 'middle', wrapText: true };
                 
-                // Set Row Heights
-                worksheet.getRow(1).height = 40;
-                for (let r = 2; r < 40; r++) {
-                    worksheet.getRow(r).height = 24;
-                }
+                // Title row height will be set dynamically at the end
                 
                 // Title Block (Row 1)
                 worksheet.mergeCells('A1:E1');
@@ -661,6 +657,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 worksheet.getColumn(4).width = 16;
                 worksheet.getColumn(5).width = 16;
                 
+                // Set Row Heights dynamically only for active rows with content
+                worksheet.getRow(1).height = 40;
+                for (let r = 2; r <= curr_row; r++) {
+                    worksheet.getRow(r).height = 24;
+                }
+                
                 // ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
                 worksheet.pageSetup = {
                     paperSize: 9, // A4 Paper Size
@@ -668,6 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     fitToPage: true,
                     fitToWidth: 1,
                     fitToHeight: 1,
+                    printArea: `A1:E${curr_row}`, // Explicit print area to prevent blank page prints
                     margins: {
                         left: 0.5, right: 0.5,
                         top: 0.5, bottom: 0.5,

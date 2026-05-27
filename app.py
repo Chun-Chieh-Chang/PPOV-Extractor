@@ -163,10 +163,7 @@ def export_part_excel():
     left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
     right_align = Alignment(horizontal="right", vertical="center")
     
-    # Row Heights
-    ws.row_dimensions[1].height = 40
-    for r in range(2, 40):
-        ws.row_dimensions[r].height = 24
+    # Title Block will be formatted at Row 1
         
     # --- 1. TITLE BLOCK ---
     ws.merge_cells("A1:E1")
@@ -314,12 +311,19 @@ def export_part_excel():
         ws.column_dimensions[col_letter].width = max(max_len + 3, 14)
     ws.column_dimensions['A'].width = 38 # Make the first label column slightly wider
     
+    # ─── ROW HEIGHTS (Only active rows with content, preventing trailing page overflows) ───
+    ws.row_dimensions[1].height = 40
+    for r in range(2, curr_row + 1):
+        ws.row_dimensions[r].height = 24
+    
     # ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
     ws.page_setup.paperSize = 9  # A4 Paper Size
     ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToPage = True
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 1
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_area = f'A1:E{curr_row}'  # Explicitly restrict print area
     
     # Set elegant margins (0.5 inch / 1.2 cm)
     ws.page_margins.left = 0.5
