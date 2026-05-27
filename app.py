@@ -314,24 +314,72 @@ def export_part_excel():
             ws.cell(row=curr_row, column=c).border = thin_border
         curr_row += 1
         
-    # --- 5. FOOTER SIGNATURE ---
+    # --- 5. 現場生產查檢紀錄 SECTION (Sign-off block) ---
+    ws.merge_cells(start_row=curr_row, start_column=1, end_row=curr_row, end_column=5)
+    check_sec = ws.cell(row=curr_row, column=1, value="  現場生產查檢紀錄 (On-site Inspection Record)")
+    check_sec.font = section_font
+    check_sec.fill = HEADER_FILL
+    check_sec.alignment = Alignment(horizontal="left", vertical="center")
+    curr_row += 1
+
+    # Row 1: Actual Press No. & Date
+    ws.cell(row=curr_row, column=1, value="實際機台編號 Actual Press No.").font = label_font
+    ws.cell(row=curr_row, column=1).alignment = left_align
+    ws.cell(row=curr_row, column=1).fill = ACCENT_FILL
+    ws.cell(row=curr_row, column=1).border = thin_border
+
+    ws.cell(row=curr_row, column=2, value="").font = value_font
+    ws.cell(row=curr_row, column=2).border = thin_border
+
+    ws.cell(row=curr_row, column=3, value="查檢日期 Inspection Date").font = label_font
+    ws.cell(row=curr_row, column=3).alignment = left_align
+    ws.cell(row=curr_row, column=3).fill = ACCENT_FILL
+    ws.cell(row=curr_row, column=3).border = thin_border
+
+    ws.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=5)
+    ws.cell(row=curr_row, column=4, value="").font = value_font
+    ws.cell(row=curr_row, column=4).border = thin_border
+    ws.cell(row=curr_row, column=5).border = thin_border
+    curr_row += 1
+
+    # Row 2: Time & Inspector Signature
+    ws.cell(row=curr_row, column=1, value="查檢時間 Inspection Time").font = label_font
+    ws.cell(row=curr_row, column=1).alignment = left_align
+    ws.cell(row=curr_row, column=1).fill = ACCENT_FILL
+    ws.cell(row=curr_row, column=1).border = thin_border
+
+    ws.cell(row=curr_row, column=2, value="").font = value_font
+    ws.cell(row=curr_row, column=2).border = thin_border
+
+    ws.cell(row=curr_row, column=3, value="查檢員簽名 Inspector Signature").font = label_font
+    ws.cell(row=curr_row, column=3).alignment = left_align
+    ws.cell(row=curr_row, column=3).fill = ACCENT_FILL
+    ws.cell(row=curr_row, column=3).border = thin_border
+
+    ws.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=5)
+    ws.cell(row=curr_row, column=4, value="").font = value_font
+    ws.cell(row=curr_row, column=4).border = thin_border
+    ws.cell(row=curr_row, column=5).border = thin_border
+    curr_row += 1
+
+    # --- 6. FOOTER SIGNATURE ---
     curr_row += 1 # Spacing row
     ws.merge_cells(start_row=curr_row, start_column=1, end_row=curr_row, end_column=5)
     author_cell = ws.cell(row=curr_row, column=1, value="Wesley Chang @ Mouldex, 2026. QC Dept. | PPOV 射出成型數據查檢表")
     author_cell.font = Font(name="Microsoft JhengHei", size=8, italic=True, color="64748B") # Slate 500
     author_cell.alignment = Alignment(horizontal="right", vertical="center")
     
-    # Set optimized print-safe column widths (Total: 78, perfectly fits A4 portrait width)
-    ws.column_dimensions['A'].width = 30  # Parameter Label
-    ws.column_dimensions['B'].width = 12  # Target Value
-    ws.column_dimensions['C'].width = 12  # Low Value
-    ws.column_dimensions['D'].width = 12  # High Value
-    ws.column_dimensions['E'].width = 12  # Actual Value/Check Record
+    # Set optimized print-safe column widths (Total: 102, perfectly scaled to A4 width)
+    ws.column_dimensions['A'].width = 38  # Parameter Label
+    ws.column_dimensions['B'].width = 16  # Target Value
+    ws.column_dimensions['C'].width = 16  # Low Value
+    ws.column_dimensions['D'].width = 16  # High Value
+    ws.column_dimensions['E'].width = 16  # Actual Value/Check Record
     
     # ─── ROW HEIGHTS (Only active rows with content, preventing trailing page overflows) ───
-    ws.row_dimensions[1].height = 40
+    ws.row_dimensions[1].height = 52
     for r in range(2, curr_row + 1):
-        ws.row_dimensions[r].height = 24
+        ws.row_dimensions[r].height = 28
     
     # ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
     ws.page_setup.paperSize = 9  # A4 Paper Size
@@ -342,11 +390,17 @@ def export_part_excel():
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_area = f'A1:E{curr_row}'  # Explicitly restrict print area
     
-    # Set elegant margins (0.5 inch / 1.2 cm)
-    ws.page_margins.left = 0.5
-    ws.page_margins.right = 0.5
-    ws.page_margins.top = 0.5
-    ws.page_margins.bottom = 0.5
+    # Set print margins to exactly 0.8 cm (0.31 inches) & set header/footer to 0
+    ws.page_margins.left = 0.31
+    ws.page_margins.right = 0.31
+    ws.page_margins.top = 0.31
+    ws.page_margins.bottom = 0.31
+    ws.page_margins.header = 0.0
+    ws.page_margins.footer = 0.0
+    
+    # Enable horizontal and vertical page centering
+    ws.print_options.horizontalCentered = True
+    ws.print_options.verticalCentered = True
         
     # Save workbook to selected path directly
     try:

@@ -644,6 +644,63 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 
                 curr_row++; // Spacing row
+
+                // ─── 現場生產查檢紀錄 SECTION (Sign-off block) ───
+                worksheet.mergeCells(curr_row, 1, curr_row, 5);
+                const check_sec = worksheet.getCell(curr_row, 1);
+                check_sec.value = "  現場生產查檢紀錄 (On-site Inspection Record)";
+                check_sec.font = section_font;
+                check_sec.fill = HEADER_FILL;
+                check_sec.alignment = left_align;
+                curr_row++;
+
+                // Row 1: Actual Press No. & Date
+                const check_row1 = worksheet.getRow(curr_row);
+                check_row1.getCell(1).value = "實際機台編號 Actual Press No.";
+                check_row1.getCell(1).font = label_font;
+                check_row1.getCell(1).fill = ACCENT_FILL;
+                check_row1.getCell(1).alignment = left_align;
+                check_row1.getCell(1).border = thin_border;
+
+                check_row1.getCell(2).value = ""; // blank
+                check_row1.getCell(2).border = thin_border;
+
+                check_row1.getCell(3).value = "查檢日期 Inspection Date";
+                check_row1.getCell(3).font = label_font;
+                check_row1.getCell(3).fill = ACCENT_FILL;
+                check_row1.getCell(3).alignment = left_align;
+                check_row1.getCell(3).border = thin_border;
+
+                worksheet.mergeCells(curr_row, 4, curr_row, 5);
+                check_row1.getCell(4).value = ""; // blank
+                check_row1.getCell(4).border = thin_border;
+                check_row1.getCell(5).border = thin_border;
+                curr_row++;
+
+                // Row 2: Time & Inspector Signature
+                const check_row2 = worksheet.getRow(curr_row);
+                check_row2.getCell(1).value = "查檢時間 Inspection Time";
+                check_row2.getCell(1).font = label_font;
+                check_row2.getCell(1).fill = ACCENT_FILL;
+                check_row2.getCell(1).alignment = left_align;
+                check_row2.getCell(1).border = thin_border;
+
+                check_row2.getCell(2).value = ""; // blank
+                check_row2.getCell(2).border = thin_border;
+
+                check_row2.getCell(3).value = "查檢員簽名 Inspector Signature";
+                check_row2.getCell(3).font = label_font;
+                check_row2.getCell(3).fill = ACCENT_FILL;
+                check_row2.getCell(3).alignment = left_align;
+                check_row2.getCell(3).border = thin_border;
+
+                worksheet.mergeCells(curr_row, 4, curr_row, 5);
+                check_row2.getCell(4).value = ""; // blank
+                check_row2.getCell(4).border = thin_border;
+                check_row2.getCell(5).border = thin_border;
+                curr_row++;
+
+                curr_row++; // Spacing row
                 
                 // Footer
                 worksheet.mergeCells(curr_row, 1, curr_row, 5);
@@ -652,17 +709,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 footer_cell.font = { name: 'Microsoft JhengHei', size: 8, italic: true, color: { argb: 'FF64748B' } };
                 footer_cell.alignment = { horizontal: 'right', vertical: 'middle' };
                 
-                // Set optimized print-safe column widths (Total: 78, perfectly fits A4 portrait width)
-                worksheet.getColumn(1).width = 30;
-                worksheet.getColumn(2).width = 12;
-                worksheet.getColumn(3).width = 12;
-                worksheet.getColumn(4).width = 12;
-                worksheet.getColumn(5).width = 12;
+                // Set optimized print-safe column widths (Total: 102, perfectly scaled to A4 width)
+                worksheet.getColumn(1).width = 38;
+                worksheet.getColumn(2).width = 16;
+                worksheet.getColumn(3).width = 16;
+                worksheet.getColumn(4).width = 16;
+                worksheet.getColumn(5).width = 16;
                 
-                // Set Row Heights dynamically only for active rows with content
-                worksheet.getRow(1).height = 40;
+                // Set Row Heights dynamically only for active rows with content to utilize vertical space
+                worksheet.getRow(1).height = 52;
                 for (let r = 2; r <= curr_row; r++) {
-                    worksheet.getRow(r).height = 24;
+                    worksheet.getRow(r).height = 28;
                 }
                 
                 // ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
@@ -674,10 +731,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     fitToHeight: 1,
                     printArea: `A1:E${curr_row}`, // Explicit print area to prevent blank page prints
                     margins: {
-                        left: 0.5, right: 0.5,
-                        top: 0.5, bottom: 0.5,
-                        header: 0.3, footer: 0.3
-                    }
+                        left: 0.31, right: 0.31,
+                        top: 0.31, bottom: 0.31,
+                        header: 0.0, footer: 0.0
+                    },
+                    horizontalCentered: true,
+                    verticalCentered: true
                 };
                 
                 // Write workbook to buffer and download

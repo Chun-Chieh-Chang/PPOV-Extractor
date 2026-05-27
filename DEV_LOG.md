@@ -135,4 +135,37 @@
      * **RCA**：網頁端默認的 `fetch -> blob -> a.click()` 會不經詢問直接下載至瀏覽器的預設下載資料夾（通常是 Downloads），無法自定義檔名與路徑。
      * **CAPA**：在 `main.py` 中新寫了 `_save_file_dialog` 輔助函數（同理利用 python 獨立子進程拉起 `filedialog.asksaveasfilename` 避免執行緒掛起），並重新打通了 `/api/export_master` 與 `/api/export_part` 的儲存機制。當點擊導出時，後端會主動彈出本機檔案儲存對話框，詢問使用者儲存檔名與路徑，寫入成功後返回 JSON 信號。
   6. **MECE 清理**：
-     * 完整刪除專案中所有臨時與冗餘的診斷/對比測試/規則分析 Python 腳本，維護目錄極簡化。
+      * 完整刪除專案中所有臨時與冗餘的診斷/對比測試/規則分析 Python 腳本，維護目錄極簡化。
+
+### 2026-05-27：版面設定與列印邊界置中調整
+* **問題現象**：為求規格查檢表列印時具備極致專業的外觀，需將列印邊界（Margins）調整為上下左右各 `0.8` 公分，頁首/頁尾設為 `0`，並啟用水平與垂直置中。
+* **原因分析 (RCA)**：預設的列印邊界與未置中的配置可能導致表格在 A4 紙張上偏向一側，或者頁首頁尾留白不均。
+* **矯正與預防措施 (CAPA)**：
+  1. **全端同步調整**：
+     * **後端 (openpyxl)**：在 `app.py` 中，將 `ws.page_margins` 的 `left`, `right`, `top`, `bottom` 設定為 `0.31` 英吋（約合 `0.8` 公分），`header` 和 `footer` 設為 `0.0`。同時啟用 `ws.print_options.horizontalCentered = True` 和 `ws.print_options.verticalCentered = True`。
+     * **前端 (ExcelJS)**：在 `static/app.js` 中，為 `worksheet.pageSetup.margins` 配置 `left: 0.31`, `right: 0.31`, `top: 0.31`, `bottom: 0.31`, `header: 0`, `footer: 0`；並顯式啟用 `horizontalCentered: true` 和 `verticalCentered: true`。
+
+### 2026-05-27：網頁版面左側被截斷與 viewport 右偏問題修正
+* **問題現象**：網頁載入或重新整理後，左側的文字與卡片邊界（例如 Header 的 `Extractor` logo 的 `Ex` 與 Master Table 左側邊緣）出現被截斷（cut-off）的現象，而右側則多出了大片無內容背景空隙。
+* **原因分析 (RCA)**：
+  * 主因為裝飾用的背景毛玻璃圓形點 `.glass-bg-blur` 設置了絕對定位與 `right: -200px;`，這使得它超出主畫面向右側延伸了 `200px`。
+  * 儘管 `body` 設定了 `overflow-x: hidden;`，但由於瀏覽器對 `html` 與 `body` 的溢出渲染 bug，當頁面重新整理或特定焦點觸發時，瀏覽器視窗視埠（Viewport）仍可能被強行向右側滾動 `200px` 以容納該絕對定位元素，導致整個視覺畫面整體左偏、左側被強行截斷。
+* **矯正與預防措施 (CAPA)**：
+  1. **溢出容器隔離**：在 `templates/index.html` 與 `index.html` 中，新增一個包裹容器 `<div class="glass-bg-container">`，將 `.glass-bg-blur` 完整包覆在內。
+  2. **嚴格邊界裁切**：於 `static/style.css` 中，為該容器設定 `width: 100%; height: 100%; position: absolute; overflow: hidden;`，使超出主畫面的背景高斯模糊發光球體在容器內部被嚴格 clipping（裁切），完全不擴展 `body` 或 `html` 的實際渲染寬度，徹底根治了 Viewport 右滾動導致的左側畫面截斷問題。
+  3. **雙重防護**：同步在 `static/style.css` 頂部為 `html` 顯式聲明 `overflow-x: hidden;`，與 `body` 的 `overflow-x` 形成雙層防線，預防一切移動端或窄屏瀏覽下的溢出偏移。
+
+### 2026-05-27：列印版面大寬度與大行高空間填滿優化
+* **問題現象 (Issue)**：列印預覽時表格過於擁擠，A4 頁面上下左右留下過多空白，未充分利用紙張空間。
+* **原因分析 (RCA)**：先前為防止橫向列印分割，將欄寬縮減為 78 且行高設為 24，導致表格在開啟 fitToPage 時等比例縮得太小且字詞擠壓折行。
+* **矯正與預防措施 (CAPA)**：
+  1. 擴大欄寬至 102 (A 欄 38，B-E 欄 16)，增加字詞伸展空間，避免折行擁擠。
+  2. 將標題行高提升至 52，一般資料行高提升至 32，優化縱向比例。藉由 fitToPage 自動縮放，讓表格能以高解像度完美填滿 A4 頁面。
+
+### 2026-05-27：列印規格表單底部現場簽核查檢欄位追加
+* **問題現象 (Issue)**：用戶要求在匯出表單最下方，必須加入機台編號、查檢日期、時間、查檢員簽名等空白查檢欄位，以利生產現場手寫查檢紀錄。
+* **原因分析 (RCA)**：原有表單在參考規格參數後即告結束，缺乏現場品管人員查檢機台與實地簽核的實體填寫區塊。
+* **矯正與預防措施 (CAPA)**：
+  1. 全端同步在 Reference Parameters 後方新增一個精美的『現場生產查檢紀錄』區塊。
+  2. 使用雙行 2x2 格局，整齊規劃『實際機台編號』、『查檢日期』、『查檢時間』與『查檢員簽名』四個空白手寫欄位，並套用一致的冰藍 Morandi 視覺配色與邊框。
+  3. 為使加入此簽核區塊後依然能以最佳解像度將表單完美收納於 A4 單頁內，將資料列高微調為更適配的 28，維持完美的直向長寬比配置。
