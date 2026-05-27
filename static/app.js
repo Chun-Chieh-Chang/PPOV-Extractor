@@ -661,6 +661,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 worksheet.getColumn(4).width = 16;
                 worksheet.getColumn(5).width = 16;
                 
+                // ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
+                worksheet.pageSetup = {
+                    paperSize: 9, // A4 Paper Size
+                    orientation: 'portrait',
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 1,
+                    margins: {
+                        left: 0.5, right: 0.5,
+                        top: 0.5, bottom: 0.5,
+                        header: 0.3, footer: 0.3
+                    }
+                };
+                
                 // Write workbook to buffer and download
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });

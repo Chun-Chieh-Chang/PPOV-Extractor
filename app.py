@@ -313,6 +313,19 @@ def export_part_excel():
         col_letter = get_column_letter(col[0].column)
         ws.column_dimensions[col_letter].width = max(max_len + 3, 14)
     ws.column_dimensions['A'].width = 38 # Make the first label column slightly wider
+    
+    # ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
+    ws.page_setup.paperSize = 9  # A4 Paper Size
+    ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 1
+    
+    # Set elegant margins (0.5 inch / 1.2 cm)
+    ws.page_margins.left = 0.5
+    ws.page_margins.right = 0.5
+    ws.page_margins.top = 0.5
+    ws.page_margins.bottom = 0.5
         
     buffer = io.BytesIO()
     wb.save(buffer)

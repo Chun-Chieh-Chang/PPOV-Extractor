@@ -126,5 +126,8 @@
      * 日誌中設計了縱向時間軸（Timeline），記錄自 `v1.0.0` 至 `v1.2.0`（冰藍極致視覺版）的真實重構歷程。
   3. **全端 Excel 色彩同步**：
      * 修改 `app.py` (`openpyxl`) 與 `app.js` (`ExcelJS`)，將匯出單頁製程查檢表的 Morandi 灰調同步替換為 **`1A3A5F` (主 Navy 藍)**、**`3A7CA8` (Header 鋼鐵藍)**、**`50718C` (次級 Slate 藍)**、**`F0F7FB` (底色冰藍)** 與 **`B4D8E7` (冰藍邊框)**，視覺極致協調。
-  4. **MECE 清理**：
+  4. **A4 一頁自動列印配置**：
+     * 針對單頁 Excel 查檢表，分別在 `app.py`（openpyxl 的 `page_setup.paperSize = 9`、`fitToPage = True`、`fitToWidth/Height = 1`）與 `static/app.js`（ExcelJS 的 `pageSetup` 屬性）中實施列印佈局配置。
+     * 設定四周 `0.5 inch`（約 1.27 公分）精緻邊距，確保導出報表在任何 Office、WPS 或 PDF 虛擬列印預覽中，皆能自動等比例縮放，完美收納於「單張 A4」範圍內輸出，徹底解決內容跨頁與列印破碎問題。
+  5. **MECE 清理**：
      * 完整刪除專案中所有臨時與冗餘的診斷/對比測試/規則分析 Python 腳本，維護目錄極簡化。
