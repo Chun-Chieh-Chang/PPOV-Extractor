@@ -584,6 +584,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet(`PPOV - ${partNo}`);
                 worksheet.views = [{ showGridLines: true }];
+                worksheet.sheetProperties = worksheet.sheetProperties || {};
                 worksheet.sheetProperties.pageSetUpPr = { fitToPage: true }; // Enforce ExcelJS to serialize pageSetUpPr.fitToPage in sheet xml
                 
                 // Color Palette (Coordinated Ice Blue Light Theme)
