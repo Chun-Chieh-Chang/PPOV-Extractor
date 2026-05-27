@@ -14,6 +14,10 @@ pip-delete-this-directory.txt
 # Output files & Test Data
 output/
 TestData/
+PPOV/
+input_pdfs/
+*.xlsx
+!config.json
 
 # IDE / System
 .vscode/
