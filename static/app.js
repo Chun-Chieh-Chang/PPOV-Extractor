@@ -283,6 +283,40 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // --- EVENT DELEGATION FOR MASTER TABLE ROWS & BUTTONS (V1.5.1 Performance Optimization) ---
+    tbodyMaster.addEventListener("click", (e) => {
+        const tr = e.target.closest("tr");
+        if (!tr || tr.parentElement !== tbodyMaster) return;
+        
+        const partNo = tr.getAttribute("data-part-no");
+        if (!partNo) return;
+        
+        const item = state.items.find(x => x["產品型號"] === partNo);
+        if (!item) return;
+
+        // Check if edit button was clicked
+        const btnEdit = e.target.closest(".btn-edit-row");
+        if (btnEdit) {
+            e.stopPropagation();
+            openEditModal(item);
+            return;
+        }
+
+        // Check if delete button was clicked
+        const btnDelete = e.target.closest(".btn-delete-row");
+        if (btnDelete) {
+            e.stopPropagation();
+            deletePartRecord(partNo);
+            return;
+        }
+
+        // Otherwise, select the row
+        document.querySelectorAll("#tableMaster tbody tr").forEach(row => row.classList.remove("selected"));
+        tr.classList.add("selected");
+        state.selectedItem = item;
+        renderSpecSheet(item);
+    });
+
 
     // --- BUTTON: SELECT FOLDER ---
     btnSelectFolder.addEventListener("click", async () => {
@@ -418,10 +452,14 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        const fragment = document.createDocumentFragment();
         displayData.forEach(item => {
             const tr = document.createElement("tr");
+            const partNo = item["產品型號"] || "";
+            tr.setAttribute("data-part-no", partNo);
+            
             tr.innerHTML = `
-                <td><strong>${item["產品型號"] || "未知"}</strong></td>
+                <td><strong>${partNo || "未知"}</strong></td>
                 <td>${item["產品名稱"] || "N/A"}</td>
                 <td>${item["圖面版次"] || "N/A"}</td>
                 <td>${item["模具編號"] || "N/A"}</td>
@@ -435,37 +473,14 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
 
             // Highlight selected row
-            if (state.selectedItem && state.selectedItem["產品型號"] === item["產品型號"]) {
+            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
                 tr.classList.add("selected");
             }
 
-            tr.addEventListener("click", () => {
-                document.querySelectorAll("#tableMaster tbody tr").forEach(row => row.classList.remove("selected"));
-                tr.classList.add("selected");
-                state.selectedItem = item;
-                renderSpecSheet(item);
-            });
-
-            // Bind Edit Row Action
-            const btnEditRow = tr.querySelector(".btn-edit-row");
-            if (btnEditRow) {
-                btnEditRow.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    openEditModal(item);
-                });
-            }
-
-            // Bind Delete Row Action
-            const btnDeleteRow = tr.querySelector(".btn-delete-row");
-            if (btnDeleteRow) {
-                btnDeleteRow.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    deletePartRecord(item["產品型號"]);
-                });
-            }
-
-            tbodyMaster.appendChild(tr);
+            fragment.appendChild(tr);
         });
+
+        tbodyMaster.appendChild(fragment);
 
         // Update statistics cards
         updateStatistics();

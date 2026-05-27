@@ -583,6 +583,7 @@ def load_master_file():
             return jsonify({"success": False, "message": "不支援的格式，請選擇 .xlsx 或 .json"})
 
         db["extracted_data"] = results
+        save_db_to_file()
 
         if not db["config"]:
             load_config()
