@@ -404,6 +404,17 @@ document.addEventListener("DOMContentLoaded", () => {
         // Show the inspection input button
         btnInputInspection.style.display = "inline-flex";
 
+        // 動態更新保壓壓力的單位
+        const holdpUnit = item["_單位_保壓壓力"] || "kg/cm²";
+        // 更新 templates/index.html 中的單位
+        const holdpTargetCell = document.getElementById('td_holdp_t');
+        if (holdpTargetCell && holdpTargetCell.parentElement) {
+            const firstCell = holdpTargetCell.parentElement.querySelector('td:first-child');
+            if (firstCell) {
+                firstCell.textContent = `保壓壓力 (${holdpUnit})`;
+            }
+        }
+
         // Update each DOM grid item dynamically
         for (const [domId, key] of Object.entries(specFields)) {
             const element = document.getElementById(domId);

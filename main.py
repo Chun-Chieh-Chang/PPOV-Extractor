@@ -95,6 +95,7 @@ def find_table_value(text, keywords, parameters):
     根據參數中的 value_type 來決定提取目標值、下限值還是上限值。
     """
     value_type = parameters.get("value_type", "target")
+    checked_unit = parameters.get("checked_unit", "kg/cm²")
     
     for keyword in keywords:
         # 找到關鍵字行的位置
@@ -110,8 +111,8 @@ def find_table_value(text, keywords, parameters):
                     current_line = lines[j]
                     tokens = re.findall(r'\b\d+\.?\d*\b|NCA|N/A', current_line, re.IGNORECASE)
                     
-                    # 特殊處理：如果有6個tokens（如保壓壓力有Bar/kg/cm²雙單位），X/Y都顯示
-                    # X是機台顯示值，Y是真實數據（單位是被勾稽的項目）
+                    # 特殊處理：如果有6個tokens（如保壓壓力有Bar/kg/cm²雙單位）
+                    # X/Y 兩個數值都顯示
                     if len(tokens) == 6 and '/' in current_line:
                         tokens = [
                             f"{tokens[0]} / {tokens[1]}",
@@ -481,6 +482,23 @@ def get_paths():
 # 處理單一 PDF 檔案的完整流程
 # ===============================================================
 
+def detect_checked_unit(full_text):
+    """
+    偵測保壓壓力被勾稽的單位（Bar 或 kg/cm2）
+    □ Bar ■ kg/cm2 表示 kg/cm2 被勾稽
+    ■ Bar □ kg/cm2 表示 Bar 被勾稽
+    """
+    lines = full_text.split('\n')
+    for line in lines:
+        if '□' in line and '■' in line and ('Bar' in line or 'bar' in line):
+            # 檢查哪個單位前面有 ■
+            if '■ kg' in line or '■kg' in line:
+                return 'kg/cm²'
+            elif '■ Bar' in line or '■Bar' in line:
+                return 'bar'
+    # 預設回傳 kg/cm²
+    return 'kg/cm²'
+
 def extract_data_from_pdf(pdf_path, config):
     """
     從指定的單一 PDF 檔案中，根據設定檔提取所有資料。
@@ -493,8 +511,11 @@ def extract_data_from_pdf(pdf_path, config):
         print(f"  - 無法讀取 PDF 檔案 '{os.path.basename(pdf_path)}': {e}")
         return None
 
+    # 偵測被勾稽的單位
+    checked_unit = detect_checked_unit(full_text)
+
     # 準備一個字典來存放此 PDF 的所有提取結果
-    extracted_data = {"檔案名稱": os.path.basename(pdf_path)}
+    extracted_data = {"檔案名稱": os.path.basename(pdf_path), "_單位_保壓壓力": checked_unit}
 
     # 遍歷設定檔中定義的每個欄位規則
     for field_rule in config["fields_to_extract"]:
@@ -507,7 +528,10 @@ def extract_data_from_pdf(pdf_path, config):
         if extraction_function:
             # 根據函式是否需要額外參數來調用它
             if "parameters" in field_rule:
-                value = extraction_function(full_text, keywords, field_rule["parameters"])
+                # 傳遞被勾稽的單位給 find_table_value
+                params = field_rule["parameters"].copy()
+                params["checked_unit"] = checked_unit
+                value = extraction_function(full_text, keywords, params)
             else:
                 value = extraction_function(full_text, keywords)
             extracted_data[field_name] = value
