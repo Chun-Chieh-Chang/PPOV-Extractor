@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
         isEditMode: false,
         sortKey: null,
         sortDirection: "asc", // "asc" or "desc"
+        user: null, // { username, role, display_name } (Phase D)
     };
 
     // Environment detection for GitHub Pages or local static file
@@ -111,6 +112,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnVersion = document.getElementById("btnVersion");
     const versionModal = document.getElementById("versionModal");
     const btnCloseVersion = document.getElementById("btnCloseVersion");
+
+    // Phase D: Auth and Login UI Elements
+    const loginOverlay = document.getElementById("loginOverlay");
+    const formLogin = document.getElementById("formLogin");
+    const login_username = document.getElementById("login_username");
+    const login_password = document.getElementById("login_password");
+    const loginErrorMsg = document.getElementById("loginErrorMsg");
+    const loginErrorText = document.getElementById("loginErrorText");
+    const btnLoginSubmit = document.getElementById("btnLoginSubmit");
+    const userProfile = document.getElementById("userProfile");
+    const txtUserDisplayName = document.getElementById("txtUserDisplayName");
+    const txtUserRole = document.getElementById("txtUserRole");
+    const btnLogout = document.getElementById("btnLogout");
 
     // Grid specification values
     const specFields = {
@@ -441,10 +455,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         tbodyMaster.innerHTML = "";
+        const isAdmin = state.user && state.user.role === "admin";
         if (displayData.length === 0) {
             tbodyMaster.innerHTML = `
                 <tr>
-                    <td colspan="6" class="empty-table-state">
+                    <td colspan="${isAdmin ? 6 : 5}" class="empty-table-state">
                         <i class="fa-solid fa-folder-open empty-icon"></i>
                         <p>未找到符合條件的數據</p>
                     </td>
@@ -465,12 +480,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${item["圖面版次"] || "N/A"}</td>
                 <td>${item["模具編號"] || "N/A"}</td>
                 <td>${item["射出成型機編號"] || "N/A"}</td>
+                ${isAdmin ? `
                 <td>
                     <div class="row-actions">
                         <button class="btn-icon-action btn-edit-row" title="編輯品號"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn-icon-action btn-delete-row" title="刪除品號"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                 </td>
+                ` : ""}
             `;
 
             // Highlight selected row
@@ -1462,7 +1479,178 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    initFetchDatabase();
+    // --- Phase D: Authentication and RBAC Logic ---
+    async function checkAuthStatus() {
+        if (isStaticMode) {
+            // 靜態模式：直接模擬管理員登入，方便展示
+            state.user = {
+                username: "admin_demo",
+                role: "admin",
+                display_name: "靜態展示管理員"
+            };
+            applyRoleMask(state.user.role);
+            loginOverlay.classList.add("hidden");
+            userProfile.style.display = "flex";
+            txtUserDisplayName.textContent = state.user.display_name;
+            txtUserRole.textContent = "Admin";
+            txtUserRole.className = "user-role-badge";
+            
+            initFetchDatabase();
+            return;
+        }
+        
+        try {
+            const response = await fetch("/api/auth/status");
+            const result = await response.json();
+            if (result.success && result.logged_in) {
+                state.user = result.user;
+                applyRoleMask(state.user.role);
+                loginOverlay.classList.add("hidden");
+                userProfile.style.display = "flex";
+                txtUserDisplayName.textContent = state.user.display_name;
+                txtUserRole.textContent = state.user.role === "admin" ? "Admin" : "Operator";
+                txtUserRole.className = `user-role-badge ${state.user.role}`;
+                
+                initFetchDatabase();
+            } else {
+                state.user = null;
+                loginOverlay.classList.remove("hidden");
+                userProfile.style.display = "none";
+            }
+        } catch (error) {
+            console.error("Auth status check failed:", error);
+            loginOverlay.classList.remove("hidden");
+        }
+    }
+
+    function applyRoleMask(role) {
+        if (role === "admin") {
+            // 還原所有管理按鈕
+            if (btnAddNewPart) btnAddNewPart.style.display = "inline-flex";
+            if (btnClearDatabase) btnClearDatabase.style.display = "inline-flex";
+            if (btnLoadMasterFile) btnLoadMasterFile.style.display = "inline-flex";
+            if (btnSelectFolder) btnSelectFolder.style.display = "inline-flex";
+            if (btnStartExtract) {
+                btnStartExtract.style.display = "inline-flex";
+                btnStartExtract.disabled = !state.folderPath;
+            }
+            
+            const thActions = document.querySelector(".table-actions-header");
+            if (thActions) thActions.style.display = "table-cell";
+        } else {
+            // 操作員：隱藏所有敏感管理按鈕與表格動作列
+            if (btnAddNewPart) btnAddNewPart.style.display = "none";
+            if (btnClearDatabase) btnClearDatabase.style.display = "none";
+            if (btnLoadMasterFile) btnLoadMasterFile.style.display = "none";
+            if (btnSelectFolder) btnSelectFolder.style.display = "none";
+            if (btnStartExtract) btnStartExtract.style.display = "none";
+            
+            const thActions = document.querySelector(".table-actions-header");
+            if (thActions) thActions.style.display = "none";
+        }
+    }
+
+    function setupAuthEventListeners() {
+        if (formLogin) {
+            formLogin.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const username = login_username.value.trim();
+                const password = login_password.value;
+                
+                if (!username || !password) {
+                    showLoginError("請輸入帳號與密碼");
+                    return;
+                }
+                
+                btnLoginSubmit.disabled = true;
+                const originalHtml = btnLoginSubmit.innerHTML;
+                btnLoginSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在驗證...`;
+                
+                try {
+                    const response = await fetch("/api/auth/login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        state.user = result.user;
+                        applyRoleMask(state.user.role);
+                        
+                        formLogin.reset();
+                        loginErrorMsg.style.display = "none";
+                        
+                        loginOverlay.classList.add("hidden");
+                        userProfile.style.display = "flex";
+                        txtUserDisplayName.textContent = state.user.display_name;
+                        txtUserRole.textContent = state.user.role === "admin" ? "Admin" : "Operator";
+                        txtUserRole.className = `user-role-badge ${state.user.role}`;
+                        
+                        initFetchDatabase();
+                    } else {
+                        showLoginError(result.message || "登入失敗");
+                    }
+                } catch (error) {
+                    console.error("Login request failed:", error);
+                    showLoginError("伺服器連線失敗");
+                } finally {
+                    btnLoginSubmit.disabled = false;
+                    btnLoginSubmit.innerHTML = originalHtml;
+                }
+            });
+        }
+        
+        if (btnLogout) {
+            btnLogout.addEventListener("click", async () => {
+                if (isStaticMode) {
+                    state.user = null;
+                    loginOverlay.classList.remove("hidden");
+                    userProfile.style.display = "none";
+                    login_username.value = "";
+                    login_password.value = "";
+                    state.items = [];
+                    renderMasterTable([]);
+                    blankPartState.style.display = "flex";
+                    partSpecCard.style.display = "none";
+                    return;
+                }
+                
+                try {
+                    const response = await fetch("/api/auth/logout", { method: "POST" });
+                    const result = await response.json();
+                    if (result.success) {
+                        state.user = null;
+                        loginOverlay.classList.remove("hidden");
+                        userProfile.style.display = "none";
+                        login_username.value = "";
+                        login_password.value = "";
+                        state.items = [];
+                        renderMasterTable([]);
+                        blankPartState.style.display = "flex";
+                        partSpecCard.style.display = "none";
+                    }
+                } catch (error) {
+                    console.error("Logout request failed:", error);
+                }
+            });
+        }
+    }
+    
+    function showLoginError(msg) {
+        loginErrorText.textContent = msg;
+        loginErrorMsg.style.display = "flex";
+        
+        const card = document.querySelector(".login-card");
+        if (card) {
+            card.style.animation = "none";
+            void card.offsetWidth;
+            card.style.animation = "shake 0.4s ease-in-out";
+        }
+    }
+
+    setupAuthEventListeners();
+    checkAuthStatus();
 
 });
 

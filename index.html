@@ -17,9 +17,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.5.1">
+    <link rel="stylesheet" href="static/style.css?v=1.6.0">
 </head>
 <body>
+    <!-- 高級毛玻璃登入遮罩 UI (Premium Glassmorphic Login Overlay) -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card glass-modal">
+            <div class="login-logo">
+                <i class="fa-solid fa-microchip-heading logo-icon"></i>
+                <h2>PPOV Specification Manager</h2>
+                <p>射出成型規格數據後台管理系統</p>
+            </div>
+            <form id="formLogin" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="login_username"><i class="fa-solid fa-user"></i> 帳號</label>
+                    <input type="text" id="login_username" name="username" required placeholder="請輸入帳號" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login_password"><i class="fa-solid fa-lock"></i> 密碼</label>
+                    <input type="password" id="login_password" name="password" required placeholder="請輸入密碼" autocomplete="current-password">
+                </div>
+                <div id="loginErrorMsg" class="login-error-msg" style="display: none;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> <span id="loginErrorText"></span>
+                </div>
+                <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-right-to-bracket"></i> 登入系統
+                </button>
+            </form>
+            <div class="login-footer">
+                Wesley Chang @ Mouldex, 2026. QC Dept.
+            </div>
+        </div>
+    </div>
+
     <div class="glass-bg-container">
         <div class="glass-bg-blur"></div>
     </div>
@@ -28,11 +58,25 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.5.0</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.6.0</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
         <div class="header-actions">
+            <!-- 登入使用者狀態顯示區 -->
+            <div id="userProfile" class="user-profile" style="display: none;">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user-gear" id="userAvatarIcon"></i>
+                </div>
+                <div class="user-info-text">
+                    <span id="txtUserDisplayName" class="user-name">載入中...</span>
+                    <span id="txtUserRole" class="user-role-badge">Operator</span>
+                </div>
+                <button id="btnLogout" class="btn-logout" title="安全登出">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+
             <!-- 隱藏的原生檔案選擇器，由按鈕觸發，無需 tkinter -->
             <input type="file" id="inputMasterFile" accept=".xlsx,.json" style="display:none;">
             <input type="file" id="inputSinglePdf" accept=".pdf" style="display:none;">
@@ -590,6 +634,6 @@
         </div>
     </div>
 
-    <script src="static/app.js?v=1.5.1"></script>
+    <script src="static/app.js?v=1.6.0"></script>
 </body>
 </html>

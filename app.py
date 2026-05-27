@@ -4,7 +4,8 @@ import io
 import json
 import webbrowser
 from threading import Timer
-from flask import Flask, jsonify, request, render_template, send_file
+import hashlib
+from flask import Flask, jsonify, request, render_template, send_file, session
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -25,6 +26,80 @@ from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dia
 app = Flask(__name__, 
             static_folder=os.path.join(BASE_PATH, 'static'),
             template_folder=os.path.join(BASE_PATH, 'templates'))
+
+app.secret_key = "ppov_extractor_secret_key_123!"
+
+def load_users():
+    users_path = os.path.join(BASE_PATH, "users.json")
+    if os.path.exists(users_path):
+        try:
+            with open(users_path, "r", encoding="utf-8") as f:
+                return json.load(f).get("users", [])
+        except Exception as e:
+            print(f"Error loading users.json: {e}")
+    return []
+
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("role") != "admin":
+            return jsonify({"success": False, "message": "拒絕存取：您不具備管理員權限！"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    payload = request.json or {}
+    username = payload.get("username", "").strip().lower()
+    password = payload.get("password", "")
+    
+    if not username or not password:
+        return jsonify({"success": False, "message": "請輸入帳號與密碼"})
+        
+    password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    users = load_users()
+    
+    user = next((u for u in users if u["username"].lower() == username and u["password_hash"] == password_hash), None)
+    
+    if not user:
+        return jsonify({"success": False, "message": "帳號或密碼錯誤"})
+        
+    session["username"] = user["username"]
+    session["role"] = user["role"]
+    session["display_name"] = user["display_name"]
+    
+    return jsonify({
+        "success": True,
+        "message": "登入成功！",
+        "user": {
+            "username": user["username"],
+            "role": user["role"],
+            "display_name": user["display_name"]
+        }
+    })
+
+@app.route("/api/auth/logout", methods=["POST"])
+def auth_logout():
+    session.clear()
+    return jsonify({"success": True, "message": "已成功登出"})
+
+@app.route("/api/auth/status", methods=["GET"])
+def auth_status():
+    if "username" in session:
+        return jsonify({
+            "success": True,
+            "logged_in": True,
+            "user": {
+                "username": session["username"],
+                "role": session["role"],
+                "display_name": session["display_name"]
+            }
+        })
+    return jsonify({
+        "success": True,
+        "logged_in": False
+    })
 
 # Global state to store extracted data in memory
 db = {
@@ -83,6 +158,7 @@ def get_config_endpoint():
     return jsonify(db["config"])
 
 @app.route("/api/select_folder", methods=["POST"])
+@admin_required
 def select_folder():
     """Triggers native OS directory picker."""
     try:
@@ -108,6 +184,7 @@ def get_database():
     })
 
 @app.route("/api/db/add", methods=["POST"])
+@admin_required
 def db_add_record():
     new_record = request.json
     if not new_record or not new_record.get("產品型號"):
@@ -133,6 +210,7 @@ def db_add_record():
     })
 
 @app.route("/api/db/edit", methods=["POST"])
+@admin_required
 def db_edit_record():
     edit_data = request.json
     if not edit_data or not edit_data.get("產品型號"):
@@ -161,6 +239,7 @@ def db_edit_record():
     })
 
 @app.route("/api/db/delete", methods=["POST"])
+@admin_required
 def db_delete_record():
     payload = request.json or {}
     part_no = payload.get("part_no")
@@ -181,6 +260,7 @@ def db_delete_record():
     })
 
 @app.route("/api/db/clear", methods=["POST"])
+@admin_required
 def db_clear():
     db["extracted_data"] = []
     save_db_to_file()
@@ -191,6 +271,7 @@ def db_clear():
     })
 
 @app.route("/api/db/import_pdf", methods=["POST"])
+@admin_required
 def db_import_single_pdf():
     """接收單一 PPOV PDF 檔案，提取其成型參數，並自動新增/更新至資料庫中。"""
     try:
@@ -256,6 +337,7 @@ def db_import_single_pdf():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route("/api/db/import_pdf_native", methods=["POST"])
+@admin_required
 def db_import_pdf_native():
     """透過後端原生 OS 檔案選擇視窗導入一或多個 PPOV PDF 檔案並自動解析、存檔。"""
     try:
@@ -333,6 +415,7 @@ def db_import_pdf_native():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route("/api/extract", methods=["POST"])
+@admin_required
 def extract_data():
     """Performs incremental extraction on PDF files in the selected folder."""
     data_payload = request.json or {}
@@ -696,6 +779,7 @@ def export_part_excel():
     )
 
 @app.route("/api/load_master_file", methods=["POST"])
+@admin_required
 def load_master_file():
     """接收瀏覽器上傳的 Excel 或 JSON 總表檔案，完全不依賴 tkinter。"""
     try:
