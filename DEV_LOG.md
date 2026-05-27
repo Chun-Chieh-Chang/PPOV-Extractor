@@ -184,3 +184,15 @@
   - 參考規格參數表的「查檢值」欄位 (4 個)
   - 底部簽名區域的 4 個欄位（機台編號、日期、時間、簽名）
 * **影響檔案**：`templates/index.html`、`static/app.js`、`static/style.css`、`app.py`
+
+### 2026-05-27：RCA/CAPA - ExcelJS pageSetUpPr 前端匯出錯誤
+* **問題現象 (Problem)**：GitHub Pages / 靜態模式匯出單一品號 Excel 時，瀏覽器 console 出現 `Cannot set properties of undefined (setting 'pageSetUpPr')`，導致前端 Excel 生成中斷。
+* **RCA 根因 (Root Cause)**：
+  1. 前端程式直接寫入 `worksheet.sheetProperties.pageSetUpPr`，這是 ExcelJS 內部/非公開欄位；在瀏覽器版 ExcelJS 4.3.0 中可能未初始化、唯讀或不存在。
+  2. 先前只補上 `worksheet.sheetProperties = worksheet.sheetProperties || {}`，仍可能因 ExcelJS 物件屬性實作方式而無效，沒有移除真正的內部 API 依賴。
+  3. GitHub Pages 使用根目錄 `index.html`，而 Flask 使用 `templates/index.html`；兩份入口若不同步，會增加部署後載入舊資源或不同 UI 的風險。
+* **CAPA 矯正/預防措施 (Corrective & Preventive Actions)**：
+  1. 移除所有前端 `pageSetUpPr` / `sheetProperties` 直接存取，改以 ExcelJS 公開 `worksheet.pageSetup` 設定 A4、單頁列印與置中。
+  2. 將 `templates/index.html` 同步到根目錄 `index.html`，確保 Flask 與 GitHub Pages 入口一致。
+  3. 為 `static/app.js` 與 `static/style.css` 加上 `?v=1.3.1` cache busting，避免瀏覽器繼續執行舊版錯誤腳本。
+  4. 新增驗證準則：`rg "pageSetUpPr|sheetProperties" static/app.js` 不得再出現前端直接存取，且 `node --check static/app.js` 必須通過。

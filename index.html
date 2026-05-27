@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="static/style.css?v=1.3.1">
 </head>
 <body>
     <div class="glass-bg-container">
@@ -28,7 +28,7 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.2.0</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.3.0</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
@@ -130,9 +130,18 @@
                             <p>品號專屬製程規格單</p>
                         </div>
                     </div>
-                    <button id="btnExportPartSpec" class="btn btn-success">
-                        <i class="fa-solid fa-file-arrow-down"></i> 匯出此品號 Excel
-                    </button>
+                    <div class="spec-header-actions">
+                        <button id="btnInputInspection" class="btn btn-inspect" style="display: none;">
+                            <i class="fa-solid fa-pen-to-square"></i> 輸入查檢數據
+                        </button>
+                        <button class="btn btn-ai-import" disabled>
+                            <i class="fa-solid fa-camera"></i> AI 照片匯入
+                            <span class="tooltip-text">🚧 此功能正在開發中，敬請期待！</span>
+                        </button>
+                        <button id="btnExportPartSpec" class="btn btn-success">
+                            <i class="fa-solid fa-file-arrow-down"></i> 匯出此品號 Excel
+                        </button>
+                    </div>
                 </div>
 
                 <div class="spec-sheet-wrapper">
@@ -170,43 +179,43 @@
                             <tbody>
                                 <tr>
                                     <td>實際融膠溫度 (℃)</td>
-                                    <td id="td_melt_t">-</td><td id="td_melt_l">-</td><td id="td_melt_h">-</td><td id="td_melt_a">-</td>
+                                    <td id="td_melt_t">-</td><td id="td_melt_l">-</td><td id="td_melt_h">-</td><td id="td_melt_a" data-input-key="melt_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>填充時間 (s)</td>
-                                    <td id="td_fill_t">-</td><td id="td_fill_l">-</td><td id="td_fill_h">-</td><td id="td_fill_a">-</td>
+                                    <td id="td_fill_t">-</td><td id="td_fill_l">-</td><td id="td_fill_h">-</td><td id="td_fill_a" data-input-key="fill_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>產品充填重量 (g)</td>
-                                    <td id="td_fillw_t">-</td><td id="td_fillw_l">-</td><td id="td_fillw_h">-</td><td id="td_fillw_a">-</td>
+                                    <td id="td_fillw_t">-</td><td id="td_fillw_l">-</td><td id="td_fillw_h">-</td><td id="td_fillw_a" data-input-key="fillw_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>保壓壓力 (bar)</td>
-                                    <td id="td_holdp_t">-</td><td id="td_holdp_l">-</td><td id="td_holdp_h">-</td><td id="td_holdp_a">-</td>
+                                    <td id="td_holdp_t">-</td><td id="td_holdp_l">-</td><td id="td_holdp_h">-</td><td id="td_holdp_a" data-input-key="holdp_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>保壓時間 (s)</td>
-                                    <td id="td_holdt_t">-</td><td id="td_holdt_l">-</td><td id="td_holdt_h">-</td><td id="td_holdt_a">-</td>
+                                    <td id="td_holdt_t">-</td><td id="td_holdt_l">-</td><td id="td_holdt_h">-</td><td id="td_holdt_a" data-input-key="holdt_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>保壓完產品重量 (g)</td>
-                                    <td id="td_packw_t">-</td><td id="td_packw_l">-</td><td id="td_packw_h">-</td><td id="td_packw_a">-</td>
+                                    <td id="td_packw_t">-</td><td id="td_packw_l">-</td><td id="td_packw_h">-</td><td id="td_packw_a" data-input-key="packw_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>冷卻時間 (s)</td>
-                                    <td id="td_cool_t">-</td><td id="td_cool_l">-</td><td id="td_cool_h">-</td><td id="td_cool_a">-</td>
+                                    <td id="td_cool_t">-</td><td id="td_cool_l">-</td><td id="td_cool_h">-</td><td id="td_cool_a" data-input-key="cool_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>模具溫度設定-母模 (℃)</td>
-                                    <td id="td_tempa_t">-</td><td id="td_tempa_l">-</td><td id="td_tempa_h">-</td><td id="td_tempa_a">-</td>
+                                    <td id="td_tempa_t">-</td><td id="td_tempa_l">-</td><td id="td_tempa_h">-</td><td id="td_tempa_a" data-input-key="tempa_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>模具溫度設定-公模 (℃)</td>
-                                    <td id="td_tempb_t">-</td><td id="td_tempb_l">-</td><td id="td_tempb_h">-</td><td id="td_tempb_a">-</td>
+                                    <td id="td_tempb_t">-</td><td id="td_tempb_l">-</td><td id="td_tempb_h">-</td><td id="td_tempb_a" data-input-key="tempb_actual">-</td>
                                 </tr>
                                 <tr>
                                     <td>模具溫度設定-滑塊 (℃)</td>
-                                    <td id="td_temps_t">-</td><td id="td_temps_l">-</td><td id="td_temps_h">-</td><td id="td_temps_a">-</td>
+                                    <td id="td_temps_t">-</td><td id="td_temps_l">-</td><td id="td_temps_h">-</td><td id="td_temps_a" data-input-key="temps_actual">-</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -227,22 +236,43 @@
                                 <tr>
                                     <td>充填階段模重 Fill Only Shot Weight (g)</td>
                                     <td id="refFillShotWeight">-</td>
-                                    <td></td>
+                                    <td data-input-key="ref_fill_shot_check"></td>
                                 </tr>
                                 <tr>
                                     <td>保壓完模重 Packed Out Shot Weight (g)</td>
                                     <td id="refPackedShotWeight">-</td>
-                                    <td></td>
+                                    <td data-input-key="ref_packed_shot_check"></td>
                                 </tr>
                                 <tr>
                                     <td>鎖模力設定 Clamp Tonnage (ton)</td>
                                     <td id="refClampTonnage">-</td>
-                                    <td></td>
+                                    <td data-input-key="ref_clamp_check"></td>
                                 </tr>
                                 <tr>
                                     <td>生產週期時間 Mold Cycle Time (s)</td>
                                     <td id="refCycleTime">-</td>
-                                    <td></td>
+                                    <td data-input-key="ref_cycle_check"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- SECTION 4: ON-SITE INSPECTION RECORD (Sign-off) -->
+                    <div class="spec-section">
+                        <h4 class="spec-section-title"><i class="fa-solid fa-clipboard-check"></i> 現場生產查檢紀錄 (On-site Inspection Record)</h4>
+                        <table class="spec-table">
+                            <tbody>
+                                <tr>
+                                    <td>實際機台編號 Actual Press No.</td>
+                                    <td data-input-key="sign_press_no"></td>
+                                    <td>查檢日期 Inspection Date</td>
+                                    <td data-input-key="sign_date"></td>
+                                </tr>
+                                <tr>
+                                    <td>查檢時間 Inspection Time</td>
+                                    <td data-input-key="sign_time"></td>
+                                    <td>查檢員簽名 Inspector Signature</td>
+                                    <td data-input-key="sign_inspector"></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -265,8 +295,24 @@
             </div>
             <div class="modal-body">
                 <div class="timeline">
-                    <!-- v1.2.0 -->
+                    <!-- v1.3.0 -->
                     <div class="timeline-item current">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.3.0 - 查檢數據即時輸入與 AI 匯入預備版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>「輸入查檢數據」按鈕，支援即時在網頁端鍵盤輸入實際值、查檢值與簽名欄位。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>輸入模式切換動畫（Material Design 底線輸入框、Enter 鍵快捷跳轉、自動聚焦）。</li>
+                                <li><span class="timeline-tag tag-new">預備</span>AI 照片匯入按鈕預留（Coming Soon tooltip 提示）。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>查檢數據於匯出 Excel 時自動寫入實際值 / 查檢值 / 簽名區域。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.2.0 -->
+                    <div class="timeline-item">
                         <div class="timeline-badge"></div>
                         <div class="timeline-title">
                             <span>v1.2.0 - 冰藍極致視覺與免伺服器雙引擎版</span>
@@ -314,6 +360,6 @@
         </div>
     </div>
 
-    <script src="static/app.js"></script>
+    <script src="static/app.js?v=1.3.1"></script>
 </body>
 </html>

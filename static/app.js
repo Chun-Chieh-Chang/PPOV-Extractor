@@ -584,8 +584,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet(`PPOV - ${partNo}`);
                 worksheet.views = [{ showGridLines: true }];
-                worksheet.sheetProperties = worksheet.sheetProperties || {};
-                worksheet.sheetProperties.pageSetUpPr = { fitToPage: true }; // Enforce ExcelJS to serialize pageSetUpPr.fitToPage in sheet xml
                 
                 // Color Palette (Coordinated Ice Blue Light Theme)
                 const NAVY_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3A5F' } };
@@ -866,7 +864,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     worksheet.getRow(r).height = 28;
                 }
                 
-                // ─── PAGE PRINT SETUP (A4 & Auto Fit to 1 Page Width & Height) ───
+                // Use the public ExcelJS page setup API; browser builds can leave
+                // internal worksheet metadata unavailable during workbook creation.
                 worksheet.pageSetup = {
                     paperSize: 9, // A4 Paper Size
                     orientation: 'portrait',
