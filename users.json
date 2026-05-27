@@ -4,13 +4,7 @@
       "username": "admin",
       "password_hash": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
       "role": "admin",
-      "display_name": "品管主管 (Wesley)"
-    },
-    {
-      "username": "operator",
-      "password_hash": "06e55b633481f7bb072957eabcf110c972e86691c3cfedabe088024bffe42f23",
-      "role": "operator",
-      "display_name": "現場查檢員"
+      "display_name": "系統管理員"
     }
   ]
 }

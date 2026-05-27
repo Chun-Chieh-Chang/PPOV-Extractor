@@ -1291,14 +1291,14 @@ tbody tr.selected td {
     justify-content: center;
     align-items: center;
     z-index: 2000;
-    opacity: 1;
-    pointer-events: auto;
+    opacity: 0;
+    pointer-events: none;
     transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.login-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
+.login-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .login-card {

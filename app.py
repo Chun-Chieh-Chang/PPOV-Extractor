@@ -101,7 +101,54 @@ def auth_status():
         "logged_in": False
     })
 
-# Global state to store extracted data in memory
+@app.route("/api/auth/change_password", methods=["POST"])
+@admin_required
+def auth_change_password():
+    payload = request.json or {}
+    current_password = payload.get("current_password", "")
+    new_password = payload.get("new_password", "")
+    confirm_password = payload.get("confirm_password", "")
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({"success": False, "message": "請填寫所有欄位"})
+
+    if new_password != confirm_password:
+        return jsonify({"success": False, "message": "新密碼與確認密碼不一致"})
+
+    if len(new_password) < 6:
+        return jsonify({"success": False, "message": "新密碼長度至少需要 6 個字元"})
+
+    username = session.get("username")
+    current_hash = hashlib.sha256(current_password.encode("utf-8")).hexdigest()
+    new_hash = hashlib.sha256(new_password.encode("utf-8")).hexdigest()
+
+    users_path = os.path.join(BASE_PATH, "users.json")
+    try:
+        with open(users_path, "r", encoding="utf-8") as f:
+            users_data = json.load(f)
+
+        user_found = False
+        for user in users_data.get("users", []):
+            if user["username"].lower() == username.lower():
+                if user["password_hash"] != current_hash:
+                    return jsonify({"success": False, "message": "目前密碼錯誤，請重新確認"})
+                user["password_hash"] = new_hash
+                user_found = True
+                break
+
+        if not user_found:
+            return jsonify({"success": False, "message": "找不到使用者資料"})
+
+        with open(users_path, "w", encoding="utf-8") as f:
+            json.dump(users_data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"success": True, "message": "密碼已成功更新！"})
+
+    except Exception as e:
+        print(f"Error changing password: {e}")
+        return jsonify({"success": False, "message": f"儲存失敗：{str(e)}"})
+
+
 db = {
     "extracted_data": [],
     "config": None,

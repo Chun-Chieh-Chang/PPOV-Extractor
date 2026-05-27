@@ -125,8 +125,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const txtUserDisplayName = document.getElementById("txtUserDisplayName");
     const txtUserRole = document.getElementById("txtUserRole");
     const btnLogout = document.getElementById("btnLogout");
+    const btnLoginPrompt = document.getElementById("btnLoginPrompt");
+    const btnCloseLogin = document.getElementById("btnCloseLogin");
 
-    // Grid specification values
+    // Change-password modal DOM references
+    const changePasswordModal = document.getElementById("changePasswordModal");
+    const formChangePassword = document.getElementById("formChangePassword");
+    const btnChangePassword = document.getElementById("btnChangePassword");
+    const btnCloseChangePassword = document.getElementById("btnCloseChangePassword");
+    const btnCancelChangePassword = document.getElementById("btnCancelChangePassword");
+    const btnSubmitChangePassword = document.getElementById("btnSubmitChangePassword");
+    const cp_current = document.getElementById("cp_current");
+    const cp_new = document.getElementById("cp_new");
+    const cp_confirm = document.getElementById("cp_confirm");
+    const cpErrorMsg = document.getElementById("cpErrorMsg");
+    const cpErrorText = document.getElementById("cpErrorText");
+    const cpSuccessMsg = document.getElementById("cpSuccessMsg");
+    const cpSuccessText = document.getElementById("cpSuccessText");
+
+
     const specFields = {
         specPartNo: "產品型號",
         specPartName: "產品名稱",
@@ -1482,18 +1499,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Phase D: Authentication and RBAC Logic ---
     async function checkAuthStatus() {
         if (isStaticMode) {
-            // 靜態模式：直接模擬管理員登入，方便展示
+            // 靜態模式：預設為 Operator 訪客身分，顯示管理員登入按鈕
             state.user = {
-                username: "admin_demo",
-                role: "admin",
-                display_name: "靜態展示管理員"
+                role: "operator",
+                display_name: "現場查檢員"
             };
-            applyRoleMask(state.user.role);
-            loginOverlay.classList.add("hidden");
-            userProfile.style.display = "flex";
-            txtUserDisplayName.textContent = state.user.display_name;
-            txtUserRole.textContent = "Admin";
-            txtUserRole.className = "user-role-badge";
+            applyRoleMask("operator");
+            loginOverlay.classList.remove("active");
+            userProfile.style.display = "none";
+            if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
             
             initFetchDatabase();
             return;
@@ -1505,21 +1519,39 @@ document.addEventListener("DOMContentLoaded", () => {
             if (result.success && result.logged_in) {
                 state.user = result.user;
                 applyRoleMask(state.user.role);
-                loginOverlay.classList.add("hidden");
+                loginOverlay.classList.remove("active");
                 userProfile.style.display = "flex";
                 txtUserDisplayName.textContent = state.user.display_name;
-                txtUserRole.textContent = state.user.role === "admin" ? "Admin" : "Operator";
-                txtUserRole.className = `user-role-badge ${state.user.role}`;
+                txtUserRole.textContent = "Admin";
+                txtUserRole.className = "user-role-badge admin";
+                if (btnLoginPrompt) btnLoginPrompt.style.display = "none";
                 
                 initFetchDatabase();
             } else {
-                state.user = null;
-                loginOverlay.classList.remove("hidden");
+                // 預設登入為現場 Operator (免登入存取)
+                state.user = {
+                    role: "operator",
+                    display_name: "現場查檢員"
+                };
+                applyRoleMask("operator");
+                loginOverlay.classList.remove("active");
                 userProfile.style.display = "none";
+                if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
+                
+                initFetchDatabase();
             }
         } catch (error) {
             console.error("Auth status check failed:", error);
-            loginOverlay.classList.remove("hidden");
+            // 發生異常時以安全 Operator 唯讀權限開啟
+            state.user = {
+                role: "operator",
+                display_name: "現場查檢員"
+            };
+            applyRoleMask("operator");
+            loginOverlay.classList.remove("active");
+            userProfile.style.display = "none";
+            if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
+            initFetchDatabase();
         }
     }
 
@@ -1551,6 +1583,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function setupAuthEventListeners() {
+        // 管理員登入點擊提示
+        if (btnLoginPrompt) {
+            btnLoginPrompt.addEventListener("click", () => {
+                loginOverlay.classList.add("active");
+                if (login_username) {
+                    login_username.value = "";
+                    login_username.focus();
+                }
+                if (login_password) login_password.value = "";
+                loginErrorMsg.style.display = "none";
+            });
+        }
+
+        // 登入彈窗關閉按鈕
+        if (btnCloseLogin) {
+            btnCloseLogin.addEventListener("click", () => {
+                loginOverlay.classList.remove("active");
+            });
+        }
+
         if (formLogin) {
             formLogin.addEventListener("submit", async (e) => {
                 e.preventDefault();
@@ -1581,13 +1633,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         formLogin.reset();
                         loginErrorMsg.style.display = "none";
                         
-                        loginOverlay.classList.add("hidden");
+                        loginOverlay.classList.remove("active");
                         userProfile.style.display = "flex";
                         txtUserDisplayName.textContent = state.user.display_name;
-                        txtUserRole.textContent = state.user.role === "admin" ? "Admin" : "Operator";
-                        txtUserRole.className = `user-role-badge ${state.user.role}`;
+                        txtUserRole.textContent = "Admin";
+                        txtUserRole.className = "user-role-badge admin";
+                        if (btnLoginPrompt) btnLoginPrompt.style.display = "none";
                         
-                        initFetchDatabase();
+                        // 重新繪製彙總表以顯示 Admin 的動作編輯按鈕
+                        renderMasterTable(state.items);
                     } else {
                         showLoginError(result.message || "登入失敗");
                     }
@@ -1604,15 +1658,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnLogout) {
             btnLogout.addEventListener("click", async () => {
                 if (isStaticMode) {
-                    state.user = null;
-                    loginOverlay.classList.remove("hidden");
+                    state.user = {
+                        role: "operator",
+                        display_name: "現場查檢員"
+                    };
+                    applyRoleMask("operator");
                     userProfile.style.display = "none";
-                    login_username.value = "";
-                    login_password.value = "";
-                    state.items = [];
-                    renderMasterTable([]);
-                    blankPartState.style.display = "flex";
-                    partSpecCard.style.display = "none";
+                    if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
+                    loginOverlay.classList.remove("active");
+                    
+                    // 重新渲染 Master Table，完全隱藏管理列
+                    renderMasterTable(state.items);
                     return;
                 }
                 
@@ -1620,15 +1676,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     const response = await fetch("/api/auth/logout", { method: "POST" });
                     const result = await response.json();
                     if (result.success) {
-                        state.user = null;
-                        loginOverlay.classList.remove("hidden");
+                        state.user = {
+                            role: "operator",
+                            display_name: "現場查檢員"
+                        };
+                        applyRoleMask("operator");
                         userProfile.style.display = "none";
-                        login_username.value = "";
-                        login_password.value = "";
-                        state.items = [];
-                        renderMasterTable([]);
-                        blankPartState.style.display = "flex";
-                        partSpecCard.style.display = "none";
+                        if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
+                        loginOverlay.classList.remove("active");
+                        
+                        // 重新渲染 Master Table，完全隱藏管理列
+                        renderMasterTable(state.items);
                     }
                 } catch (error) {
                     console.error("Logout request failed:", error);
@@ -1649,8 +1707,123 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ---- 修改密碼 Modal 功能 ----
+
+    function openChangePasswordModal() {
+        if (!changePasswordModal) return;
+        formChangePassword.reset();
+        cpErrorMsg.style.display = "none";
+        cpSuccessMsg.style.display = "none";
+        changePasswordModal.classList.add("active");
+        if (cp_current) cp_current.focus();
+    }
+
+    function closeChangePasswordModal() {
+        if (!changePasswordModal) return;
+        changePasswordModal.classList.remove("active");
+    }
+
+    function showCpError(msg) {
+        cpSuccessMsg.style.display = "none";
+        cpErrorText.textContent = msg;
+        cpErrorMsg.style.display = "flex";
+        // 觸發 shake 動畫
+        const card = changePasswordModal ? changePasswordModal.querySelector(".modal-content") : null;
+        if (card) {
+            card.style.animation = "none";
+            void card.offsetWidth;
+            card.style.animation = "shake 0.4s ease-in-out";
+        }
+    }
+
+    function showCpSuccess(msg) {
+        cpErrorMsg.style.display = "none";
+        cpSuccessText.textContent = msg;
+        cpSuccessMsg.style.display = "flex";
+    }
+
+    function setupChangePasswordListeners() {
+        if (btnChangePassword) {
+            btnChangePassword.addEventListener("click", openChangePasswordModal);
+        }
+        if (btnCloseChangePassword) {
+            btnCloseChangePassword.addEventListener("click", closeChangePasswordModal);
+        }
+        if (btnCancelChangePassword) {
+            btnCancelChangePassword.addEventListener("click", closeChangePasswordModal);
+        }
+        // 點擊遮罩背景關閉
+        if (changePasswordModal) {
+            changePasswordModal.addEventListener("click", (e) => {
+                if (e.target === changePasswordModal) closeChangePasswordModal();
+            });
+        }
+
+        if (formChangePassword) {
+            formChangePassword.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const currentPw = cp_current.value;
+                const newPw = cp_new.value;
+                const confirmPw = cp_confirm.value;
+
+                if (!currentPw || !newPw || !confirmPw) {
+                    showCpError("請填寫所有欄位");
+                    return;
+                }
+                if (newPw !== confirmPw) {
+                    showCpError("新密碼與確認密碼不一致");
+                    return;
+                }
+                if (newPw.length < 6) {
+                    showCpError("新密碼長度至少需要 6 個字元");
+                    return;
+                }
+
+                // 靜態模式：無法真正更改密碼
+                if (isStaticMode) {
+                    showCpError("靜態展示模式不支援密碼修改功能");
+                    return;
+                }
+
+                const originalHtml = btnSubmitChangePassword.innerHTML;
+                btnSubmitChangePassword.disabled = true;
+                btnSubmitChangePassword.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 儲存中...`;
+
+                try {
+                    const response = await fetch("/api/auth/change_password", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            current_password: currentPw,
+                            new_password: newPw,
+                            confirm_password: confirmPw
+                        })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showCpSuccess(result.message || "密碼已成功更新！");
+                        formChangePassword.reset();
+                        // 2 秒後自動關閉
+                        setTimeout(closeChangePasswordModal, 2000);
+                    } else {
+                        showCpError(result.message || "儲存失敗，請重試");
+                    }
+                } catch (error) {
+                    console.error("Change password request failed:", error);
+                    showCpError("伺服器連線失敗，請重試");
+                } finally {
+                    btnSubmitChangePassword.disabled = false;
+                    btnSubmitChangePassword.innerHTML = originalHtml;
+                }
+            });
+        }
+    }
+
+    setupChangePasswordListeners();
     setupAuthEventListeners();
     checkAuthStatus();
 
 });
+
 

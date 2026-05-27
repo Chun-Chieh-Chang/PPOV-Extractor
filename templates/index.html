@@ -17,12 +17,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.6.0">
+    <link rel="stylesheet" href="static/style.css?v=1.7.0">
 </head>
 <body>
     <!-- 高級毛玻璃登入遮罩 UI (Premium Glassmorphic Login Overlay) -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card glass-modal">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: -20px; margin-right: -10px;">
+                <button class="modal-close" id="btnCloseLogin" style="font-size: 24px;">&times;</button>
+            </div>
             <div class="login-logo">
                 <i class="fa-solid fa-microchip-heading logo-icon"></i>
                 <h2>PPOV Specification Manager</h2>
@@ -63,6 +66,11 @@
             </div>
         </div>
         <div class="header-actions">
+            <!-- 管理員登入按鈕 -->
+            <button id="btnLoginPrompt" class="btn btn-secondary" style="display: none;">
+                <i class="fa-solid fa-right-to-bracket"></i> 管理員登入
+            </button>
+
             <!-- 登入使用者狀態顯示區 -->
             <div id="userProfile" class="user-profile" style="display: none;">
                 <div class="user-avatar">
@@ -72,6 +80,9 @@
                     <span id="txtUserDisplayName" class="user-name">載入中...</span>
                     <span id="txtUserRole" class="user-role-badge">Operator</span>
                 </div>
+                <button id="btnChangePassword" class="btn-logout" title="修改密碼" style="background: rgba(96,165,250,0.12); color: var(--color-accent-blue);">
+                    <i class="fa-solid fa-key"></i>
+                </button>
                 <button id="btnLogout" class="btn-logout" title="安全登出">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
@@ -634,6 +645,44 @@
         </div>
     </div>
 
-    <script src="static/app.js?v=1.6.0"></script>
+    <!-- 修改密碼 Modal -->
+    <div id="changePasswordModal" class="modal-overlay">
+        <div class="modal-content glass-modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-key" style="color: var(--color-accent-blue);"></i> 修改系統管理員密碼</h3>
+                <button class="modal-close" id="btnCloseChangePassword">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formChangePassword" onsubmit="return false;">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="cp_current"><i class="fa-solid fa-lock"></i> 目前密碼</label>
+                        <input type="password" id="cp_current" required placeholder="請輸入目前使用的密碼" autocomplete="current-password">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="cp_new"><i class="fa-solid fa-lock-open"></i> 新密碼 <span style="color: var(--color-secondary-text); font-weight: 400; font-size: 12px;">(至少 6 個字元)</span></label>
+                        <input type="password" id="cp_new" required placeholder="請設定新密碼" autocomplete="new-password">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="cp_confirm"><i class="fa-solid fa-lock-open"></i> 確認新密碼</label>
+                        <input type="password" id="cp_confirm" required placeholder="請再次輸入新密碼" autocomplete="new-password">
+                    </div>
+                    <div id="cpErrorMsg" class="login-error-msg" style="display: none; margin-top: 8px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <span id="cpErrorText"></span>
+                    </div>
+                    <div id="cpSuccessMsg" style="display: none; margin-top: 8px; color: var(--color-success); font-size: 14px; display: flex; gap: 6px; align-items: center;">
+                        <i class="fa-solid fa-circle-check"></i> <span id="cpSuccessText"></span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelChangePassword">取消</button>
+                <button type="submit" form="formChangePassword" class="btn btn-primary" id="btnSubmitChangePassword">
+                    <i class="fa-solid fa-floppy-disk"></i> 儲存新密碼
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/app.js?v=1.7.0"></script>
 </body>
 </html>

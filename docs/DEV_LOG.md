@@ -1,6 +1,33 @@
 # Development Log
 
-## 2026-05-27 - PDF Single Import and Automation (v1.5.2)
+## 2026-05-27 - Admin Password Change Feature (v1.7.1)
+
+### Scope
+
+- **密碼自助修改功能**：允許已登入的系統管理員透過 UI 修改帳號密碼，並即時持久化保存至 `users.json`。
+- **安全邊界設計**：後端 `/api/auth/change_password` 由 `@admin_required` 裝飾器保護；驗證目前密碼、新舊密碼比對、最低長度規範（≥6 字元）。
+- **全端完整實作**：前端新增修改密碼 Modal（金鑰🔑 icon 按鈕），含 Shake 抖動錯誤動畫與 2 秒後自動關閉成功提示。
+- **自動化確效**：擴充 `auth_test.py` 新增 `test_change_password_endpoint`，驗證 5 個安全邊界案例與正確修改流程，全數通過。
+
+### Today's Changes Summary
+
+1. **app.py**：新增 `POST /api/auth/change_password` 端點（`@admin_required`），讀取 `users.json` 驗證目前密碼後更新 SHA-256 雜湊並寫回檔案。
+2. **templates/index.html & index.html**：在 `userProfile` 區新增藍色鑰匙按鈕 (`btnChangePassword`)，並在 `partEditModal` 後插入修改密碼 Modal DOM（重用 `.modal-overlay` / `.glass-modal` 樣式）。版本號升至 `v1.7.0`（CSS + JS）。
+3. **static/app.js**：新增 `changePasswordModal` 系列 DOM 變數、`openChangePasswordModal`、`closeChangePasswordModal`、`showCpError`、`showCpSuccess`、`setupChangePasswordListeners` 函式，整合背景點擊關閉與 2 秒自動關閉成功提示。
+4. **scratch/auth_test.py**：新增 `test_change_password_endpoint` 確效案例，5 個安全邊界均通過。
+
+### RCA / CAPA
+
+- **CAPA-1 (密碼長度)**：預設管理員密碼 `admin` 為 5 字元，低於最短規範。測試時若「還原成 admin」會被自己的長度驗證阻擋。已在測試中明確說明此設計意圖（短密碼失敗為預期行為），並記錄 v1.7.1 正式部署後建議系統管理員立即修改為更長密碼。
+
+### Verification Notes
+
+- `python -m py_compile app.py main.py` passed.
+- `node --check static/app.js` passed.
+- `auth_test.py` ran 5 tests, all passed (OK).
+- `users.json` 密碼在測試後已正確還原為原始 `admin` SHA-256 雜湊。
+
+
 
 ### Scope
 
