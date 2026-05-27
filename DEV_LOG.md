@@ -94,3 +94,15 @@
      * **ExcelJS**：引入 ExcelJS，在前端直接生成具備 Microsoft JhengHei、Morandi 莫蘭迪 Slate 灰度色彩（NAVY_FILL、ACCENT_FILL 等）、文字自動換行與網格合併的高階 Excel 製程查檢表。
   2. **靜態與後端雙模自適應 (Hybrid Mode)**：在 `app.js` 加入動態環境監測。若檢測為 `StaticMode`，會自動隱藏 Git 倉儲同步按鈕，並於左側面板彈出精美提醒 Banner；同時，點擊「載入現有總表」與「匯出規格單」時自動由 Python API 轉換為 JS 本地執行，無縫對接。
   3. **GitHub Actions 自動化部署**：建立 `.github/workflows/deploy.yml` 配置文件，在推送至 `main` 分支時，觸發 GitHub Actions 執行安全靜態打包，完成向 GitHub Pages 的零接觸自動部署。
+
+---
+
+### 2026-05-27：全面清除多餘的「GitHub 倉儲同步」功能
+* **問題現象**：使用者明確指出「GitHub 倉儲同步」在主操作網頁中屬於多餘（Redundant）之功能，要求將其從整個專案中完全清除乾淨。
+* **原因分析 (RCA)**：網頁主介面之設計目標為讓一般 QC 品保人員能夠極簡、流暢地進行數據解析與規格單導出，內置 Git 倉儲同步與 Commit 推送雖然精美但屬非必要的開發/運維工具，且有誤操作與敏感憑證安全疑慮，應予以全面清理以維護系統最小功能集（Minimal Feature Set）原則與代碼健壯性。
+* **矯正與預防措施 (CAPA)**：
+  1. **前端清理**：完全刪除 `templates/index.html` 與根目錄 `index.html` 中頂部 Header 的「倉儲同步」按鈕與下方的整個 `#gitModal` 彈窗結構。
+  2. **樣式清理**：自 `static/style.css` 中徹底刪除包含 `.git-card`、`.git-body`、`.git-info-row`、`.git-input`、`modal-overlay`、`modal-content`、`badge-dot` 等所有 Git 與彈窗相關的冗餘樣式，確保樣式表緊湊無死代碼。
+  3. **控制邏輯清理**：自 `static/app.js` 中完整移除了 Git Modal 開關、`updateGitStatus` 函數以及 `btnGitPush` 的 API fetch 連線動作，使前端只專注於 PPOV 核心數據控制。
+  4. **後端 API 清除**：自 `app.py` 中彻底刪除了 `/api/git_status` 與 `/api/git_push` 兩個後端路由與對應 Python Git 執行方法，使後端不復存有任何 Git 進程呼叫。
+
