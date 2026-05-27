@@ -190,6 +190,71 @@ def db_clear():
         "data": []
     })
 
+@app.route("/api/db/import_pdf", methods=["POST"])
+def db_import_single_pdf():
+    """接收單一 PPOV PDF 檔案，提取其成型參數，並自動新增/更新至資料庫中。"""
+    try:
+        if "file" not in request.files:
+            return jsonify({"success": False, "message": "未收到檔案"})
+            
+        f = request.files["file"]
+        if not f or f.filename == "":
+            return jsonify({"success": False, "message": "未選擇任何檔案"})
+            
+        if not f.filename.lower().endswith(".pdf"):
+            return jsonify({"success": False, "message": "不支援的格式，請選擇 .pdf 規格單檔案"})
+            
+        filename = f.filename
+        
+        # 暫存於 output/ 目錄中以便進行實體路徑提取
+        temp_dir = os.path.join(BASE_PATH, "output")
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+            
+        temp_filepath = os.path.join(temp_dir, filename)
+        f.save(temp_filepath)
+        
+        if not db["config"]:
+            load_config()
+            
+        # 調用核心提取函式
+        data = extract_data_from_pdf(temp_filepath, db["config"])
+        
+        # 移除暫存檔案
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
+            
+        if not data:
+            return jsonify({"success": False, "message": f"檔案 {filename} 解析失敗或格式不合"})
+            
+        part_no = data.get("產品型號", "").strip()
+        if not part_no or part_no == "未找到":
+            return jsonify({"success": False, "message": f"在 PDF 規格書 {filename} 中未找到有效的產品型號"})
+            
+        load_db_from_file()
+        
+        # 檢查是否已存在，進行覆蓋/新增合併
+        existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("產品型號") == part_no), None)
+        
+        if existing_idx is not None:
+            db["extracted_data"][existing_idx] = data
+            msg = f"品號 {part_no} 已存在於資料庫中，已成功重新解析 PDF 並覆蓋規格參數！"
+        else:
+            db["extracted_data"].append(data)
+            msg = f"品號 {part_no} 解析成功，已自動導入規格資料庫！"
+            
+        save_db_to_file()
+        
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "count": len(db["extracted_data"]),
+            "data": db["extracted_data"],
+            "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 @app.route("/api/extract", methods=["POST"])
 def extract_data():
     """Performs incremental extraction on PDF files in the selected folder."""

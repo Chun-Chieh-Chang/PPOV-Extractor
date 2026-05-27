@@ -1,5 +1,27 @@
 # Development Log
 
+## 2026-05-27 - PDF Single Import and Automation (v1.5.2)
+
+### Scope
+
+- **自動化新增品號 (Single PDF Import)**：將原本的人工手動新增品號欄位表單，升級為上傳單一 PPOV PDF 規格單並由系統進行自動化數據提取與資料庫載入。
+- **後端單檔提取端點**：實作 `/api/db/import_pdf`，保存暫存檔、呼叫核心解析引擎提取 14+ 組關鍵製程參數、自動合併/更新既有品號數據、最後持久化寫入硬碟並清理暫存。
+- **前端自動引導預覽**：點擊「新增品號」觸發隱藏的 PDF 檔案選擇器。導入成功後，前端會自動重繪 Master Table 並主動搜尋、高亮、選中該品號，在右側面板即時預覽高質感查檢規格單。
+
+### Today's Changes Summary
+
+1. **app.py**：新增 `/api/db/import_pdf` 接口，支持單一檔案 PDF 解析與庫內增量合併（覆蓋/追加）。
+2. **static/app.js**：
+   - 重新綁定 `btnAddNewPart` 點擊事件，將其對接至新建立的隱藏 `#inputSinglePdf` 檔案上傳框。
+   - 實作 `#inputSinglePdf` 變動監聽器，發送 FormData 上傳，並在成功後以正則表達式提取品號，執行自動尋找與規格預覽聚焦。
+3. **templates/index.html & index.html**：在標題欄操作區新增隱藏的 `<input type="file" id="inputSinglePdf" accept=".pdf" style="display:none;">` 元件。
+
+### Verification Notes
+
+- `python -m py_compile app.py main.py` passed.
+- `node --check static/app.js` passed.
+- Automated PDF Single Import test suite `pdca_test.py` simulated real-world PDF uploads, correctly parsed `A02-210-251` with all target/low/high bounds, verified database file write. 100% of checks passed successfully.
+
 ## 2026-05-27 - Performance Optimization and Persistence Fix (v1.5.1)
 
 ### Scope
