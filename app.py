@@ -122,6 +122,7 @@ def export_master():
 def export_part_excel():
     """Generates a highly premium structured Excel sheet for a single part.""" 
     part_no = request.json.get("part_no")
+    inspection_data = request.json.get("inspection_data", {})
     if not part_no:
         return jsonify({"success": False, "message": "請指定品號"})
         
@@ -296,7 +297,47 @@ def export_part_excel():
             ws.cell(row=curr_row, column=c).border = thin_border
         curr_row += 1
         
-    # --- 5. FOOTER SIGNATURE ---
+    # --- 5. ON-SITE INSPECTION RECORD (Rows 28-30) ---
+    curr_row += 1 # Spacing
+    ws.merge_cells(f"A{curr_row}:E{curr_row}")
+    inspect_sec = ws.cell(row=curr_row, column=1, value="  現場生產查檢紀錄 (On-site Inspection Record)")
+    inspect_sec.font = section_font
+    inspect_sec.fill = HEADER_FILL
+    inspect_sec.alignment = Alignment(horizontal="left", vertical="center")
+    curr_row += 1
+    
+    # Inspection record fields (2 rows, 4 columns total)
+    inspect_fields = [
+        ("實際機台編號 Actual Press No.", "sign_press_no", "查檢日期 Inspection Date", "sign_date"),
+        ("查檢時間 Inspection Time", "sign_time", "查檢員簽名 Inspector Signature", "sign_inspector")
+    ]
+    
+    for f1, k1, f2, k2 in inspect_fields:
+        # Column 1: Label 1
+        ws.cell(row=curr_row, column=1, value=f1).font = label_font
+        ws.cell(row=curr_row, column=1).alignment = left_align
+        ws.cell(row=curr_row, column=1).fill = ACCENT_FILL
+        
+        # Column 2: Value 1
+        ws.cell(row=curr_row, column=2, value=inspection_data.get(k1, "")).font = value_font
+        ws.cell(row=curr_row, column=2).alignment = center_align
+        
+        # Column 3: Label 2
+        ws.cell(row=curr_row, column=3, value=f2).font = label_font
+        ws.cell(row=curr_row, column=3).alignment = left_align
+        ws.cell(row=curr_row, column=3).fill = ACCENT_FILL
+        
+        # Columns 4-5 Merged: Value 2
+        ws.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=5)
+        ws.cell(row=curr_row, column=4, value=inspection_data.get(k2, "")).font = value_font
+        ws.cell(row=curr_row, column=4).alignment = center_align
+        
+        # Apply borders
+        for c in range(1, 6):
+            ws.cell(row=curr_row, column=c).border = thin_border
+        curr_row += 1
+        
+    # --- 6. FOOTER SIGNATURE ---
     curr_row += 1 # Spacing row
     ws.merge_cells(start_row=curr_row, start_column=1, end_row=curr_row, end_column=5)
     author_cell = ws.cell(row=curr_row, column=1, value="Wesley Chang @ Mouldex, 2026. QC Dept. | PPOV 射出成型數據查檢表")
