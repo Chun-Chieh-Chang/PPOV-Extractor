@@ -10,11 +10,21 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
+# 取得應用程式的基礎路徑（支援 PyInstaller 打包）
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+BASE_PATH = get_base_path()
+
 # Ensure workspace is in python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_PATH)
 from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dialog
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            static_folder=os.path.join(BASE_PATH, 'static'),
+            template_folder=os.path.join(BASE_PATH, 'templates'))
 
 # Global state to store extracted data in memory
 db = {
@@ -24,7 +34,7 @@ db = {
 }
 
 def load_config():
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    config_path = os.path.join(BASE_PATH, "config.json")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             db["config"] = json.load(f)
@@ -66,7 +76,11 @@ def extract_data():
     if not db["config"]:
         load_config()
         
-    pdf_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.lower().endswith('.pdf')]
+    pdf_files = []
+    for root, dirs, files in os.walk(folder_path):
+        for f in files:
+            if f.lower().endswith('.pdf'):
+                pdf_files.append(os.path.join(root, f))
     if not pdf_files:
         return jsonify({"success": False, "message": "此資料夾內無任何 PDF 檔案"})
         

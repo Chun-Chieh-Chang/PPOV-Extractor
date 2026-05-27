@@ -19,6 +19,10 @@ input_pdfs/
 *.xlsx
 !config.json
 
+# PyInstaller Build
+build/
+dist/
+
 # IDE / System
 .vscode/
 .idea/
