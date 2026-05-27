@@ -78,6 +78,7 @@ def extract_data():
         
     pdf_files = []
     for root, dirs, files in os.walk(folder_path):
+        dirs[:] = [d for d in dirs if not d.startswith('$') and not d.startswith('.') and d not in ['System Volume Information', 'RECYCLE.BIN']]
         for f in files:
             if f.lower().endswith('.pdf'):
                 pdf_files.append(os.path.join(root, f))
