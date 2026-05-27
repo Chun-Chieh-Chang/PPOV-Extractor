@@ -83,4 +83,14 @@
   2. **高階 Modal 設計**：於頂部 Header 右側新增一個獨立的「倉儲同步」按鈕。當點擊時，會彈出一個極致精美的半透明磨砂玻璃（Glassmorphism）懸浮彈窗（Modal），將 Git 操作完整收納於其中。
   3. **微動畫與提示 dot 整合**：Header 按鈕旁加入了細微的 Amber 警告提示點（`.badge-dot`）。當後端檢測到本地有未推送的 Git 變更時，提示點會自動浮現，引導維護者點擊同步，在提升美觀度的同時不失功能引導性。
 
+---
 
+### 2026-05-27：GitHub Pages 靜態部署與免伺服器解析引擎
+* **問題現象**：用戶希望將操作頁面部署到 GitHub Pages。然而，傳統 GitHub Pages 僅支援靜態網頁（HTML/CSS/JS），無法直接運行 Python 後端（如 Flask 及 pdfplumber），導致「載入總表」及「規格單導出」等原先依賴後端 API 的功能失效。
+* **原因分析 (RCA)**：靜態伺服器無 Python 運作環境，必須在前端實現本地文件解析（Excel 讀取）與本地 Excel 文件生成（Morandi 樣式規格單寫入）之雙向引擎，方能擺脫後端依賴。
+* **矯正與預防措施 (CAPA)**：
+  1. **免伺服器雙引擎整合**：
+     * **SheetJS (XLSX)**：在前端引入 SheetJS，當檢測為靜態模式（`isStaticMode`，如 file 協定或 GitHub Pages 網址）時，直接在瀏覽器記憶體中讀取並解析上傳的總表 Excel/JSON 檔案，並填充至彙總表。
+     * **ExcelJS**：引入 ExcelJS，在前端直接生成具備 Microsoft JhengHei、Morandi 莫蘭迪 Slate 灰度色彩（NAVY_FILL、ACCENT_FILL 等）、文字自動換行與網格合併的高階 Excel 製程查檢表。
+  2. **靜態與後端雙模自適應 (Hybrid Mode)**：在 `app.js` 加入動態環境監測。若檢測為 `StaticMode`，會自動隱藏 Git 倉儲同步按鈕，並於左側面板彈出精美提醒 Banner；同時，點擊「載入現有總表」與「匯出規格單」時自動由 Python API 轉換為 JS 本地執行，無縫對接。
+  3. **GitHub Actions 自動化部署**：建立 `.github/workflows/deploy.yml` 配置文件，在推送至 `main` 分支時，觸發 GitHub Actions 執行安全靜態打包，完成向 GitHub Pages 的零接觸自動部署。
