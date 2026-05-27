@@ -27,6 +27,9 @@
         <div class="header-actions">
             <!-- 隱藏的原生檔案選擇器，由按鈕觸發，無需 tkinter -->
             <input type="file" id="inputMasterFile" accept=".xlsx,.json" style="display:none;">
+            <button id="btnOpenGitModal" class="btn btn-secondary">
+                <i class="fa-brands fa-github"></i> 倉儲同步 <span id="gitBadgeDot" class="badge-dot" style="display: none;"></span>
+            </button>
             <button id="btnLoadMasterFile" class="btn btn-secondary">
                 <i class="fa-solid fa-file-excel"></i> 載入現有總表
             </button>
@@ -58,32 +61,7 @@
                 </div>
             </div>
 
-            <!-- GitHub Sync Git Operation UI Card -->
-            <div class="card git-card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-brands fa-github"></i> GitHub 倉儲同步
-                    </div>
-                    <span id="gitBadgeStatus" class="badge">正在偵測...</span>
-                </div>
-                <div class="git-body">
-                    <div class="git-info-row">
-                        <span class="git-label">遠端網址:</span>
-                        <span id="txtGitRemote" class="git-value">正在讀取...</span>
-                    </div>
-                    <div class="git-info-row">
-                        <span class="git-label">分支與變更:</span>
-                        <span id="txtGitStatus" class="git-value">正在讀取...</span>
-                    </div>
-                    <div class="git-action-form">
-                        <input type="text" id="inputCommitMsg" class="git-input" placeholder="請輸入 Commit 提交訊息..." value="feat: 優化 Web 數據載入、效能與子進程資料夾選擇">
-                        <button id="btnGitPush" class="btn btn-primary btn-block">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> 執行軟體確效並推送
-                        </button>
-                    </div>
-                    <div id="gitLogDetails" class="git-log-details" style="display: none;"></div>
-                </div>
-            </div>
+
 
             <div class="card master-table-card">
                 <div class="card-header">
@@ -272,6 +250,43 @@
     <footer class="app-footer">
         <p>&copy; 2026 PPOV Molding Extractor. Author: Wesley Chang @ Mouldex, 2026. QC Dept. | Senior Full-stack Architecture & Digital Art Direction.</p>
     </footer>
+
+    <!-- Floating Glassmorphic Modal for Git Sync -->
+    <div id="gitModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-brands fa-github"></i> GitHub 倉儲同步設定
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span id="gitBadgeStatus" class="badge">正在偵測...</span>
+                    <button id="btnCloseGitModal" class="btn-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="git-body">
+                <div class="git-info-row">
+                    <span class="git-label">遠端網址:</span>
+                    <span id="txtGitRemote" class="git-value">正在讀取...</span>
+                </div>
+                <div class="git-info-row">
+                    <span class="git-label">分支與變更:</span>
+                    <span id="txtGitStatus" class="git-value">正在讀取...</span>
+                </div>
+                <div class="git-action-form">
+                    <div class="input-group">
+                        <label for="inputCommitMsg">提交 Commit 訊息</label>
+                        <input type="text" id="inputCommitMsg" class="git-input" placeholder="請輸入 Commit 提交訊息..." value="feat: 優化 Web 數據載入、效能與子進程資料夾選擇">
+                    </div>
+                    <button id="btnGitPush" class="btn btn-primary btn-block">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> 執行軟體確效並推送
+                    </button>
+                </div>
+                <div id="gitLogDetails" class="git-log-details" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/app.js"></script>
 </body>

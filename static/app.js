@@ -314,13 +314,44 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- GITHUB SYNC LOGIC ---
+    // --- GITHUB SYNC LOGIC & MODAL CONTROLLERS ---
+    const gitModal = document.getElementById("gitModal");
+    const btnOpenGitModal = document.getElementById("btnOpenGitModal");
+    const btnCloseGitModal = document.getElementById("btnCloseGitModal");
+    const gitBadgeDot = document.getElementById("gitBadgeDot");
+
     const gitBadgeStatus = document.getElementById("gitBadgeStatus");
     const txtGitRemote = document.getElementById("txtGitRemote");
     const txtGitStatus = document.getElementById("txtGitStatus");
     const inputCommitMsg = document.getElementById("inputCommitMsg");
     const btnGitPush = document.getElementById("btnGitPush");
     const gitLogDetails = document.getElementById("gitLogDetails");
+
+    // Open Git Modal with smooth animation
+    btnOpenGitModal.addEventListener("click", () => {
+        gitModal.style.display = "flex";
+        // Force reflow
+        void gitModal.offsetWidth;
+        gitModal.classList.add("active");
+        updateGitStatus();
+    });
+
+    // Close Git Modal
+    function closeGitModal() {
+        gitModal.classList.remove("active");
+        setTimeout(() => {
+            gitModal.style.display = "none";
+        }, 300);
+    }
+
+    btnCloseGitModal.addEventListener("click", closeGitModal);
+
+    // Close modal if user clicks outside of modal content
+    gitModal.addEventListener("click", (e) => {
+        if (e.target === gitModal) {
+            closeGitModal();
+        }
+    });
 
     async function updateGitStatus() {
         try {
@@ -333,9 +364,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.has_changes) {
                     gitBadgeStatus.className = "badge badge-warning";
                     gitBadgeStatus.textContent = "待同步";
+                    gitBadgeDot.style.display = "inline-block";
                 } else {
                     gitBadgeStatus.className = "badge badge-success";
                     gitBadgeStatus.textContent = "已同步";
+                    gitBadgeDot.style.display = "none";
                 }
             } else {
                 txtGitStatus.textContent = "偵測失敗";
@@ -371,6 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (result.success) {
                 alert(result.message);
                 updateGitStatus();
+                closeGitModal();
             } else {
                 alert(result.message || "推送失敗");
                 if (result.details) {
