@@ -62,3 +62,14 @@
   * **解決 (CAPA)**：使用 `openpyxl` 自定義單頁規格單生成模組。引入**莫蘭迪 Slate 灰度色彩美學 (Slate 800/700/600/100)** 填充標題與網格，採用雙底線、粗體與置中對齊，自動偵測長度設定寬度，產生的 Excel 樣式甚至比原始 PDF 還要精美、便於列印！
 * **問題 3：瀏覽器自動開啟**
   * **解決**：引入 `threading.Timer(1.0, launch_browser)` 在 Flask 啟動完成後 1 秒自動開啟瀏覽器，極致優化 User 使用體驗。
+
+---
+
+### 2026-05-27：Git 安全防禦措施 (TestData 與 output 排除)
+* **問題現象**：專案克隆後發現 `TestData/`（包含大量 PDF 及 Excel 原始檔案）與 `output/` 暫存資料夾已被 Git 追蹤並可能被 push 至 GitHub 倉庫。
+* **原因分析 (RCA)**：`.gitignore` 僅限制了 `output/*`，但未完全阻斷 `TestData/` 目錄的追蹤，且之前的部分測試檔案已被加入並提交至 Git 歷史紀錄中。
+* **矯正與預防措施 (CAPA)**：
+  1. 修改 `.gitignore` 檔案，完全忽視 `TestData/` 及 `output/` 資料夾。
+  2. 執行 `git rm -r --cached`，安全地將這兩個資料夾從 Git 快取索引中移除（保持本地磁碟上的實際檔案不被刪除）。
+  3. 建立 local commit 以保存此配置，確保後續任何 `git push` 皆不會將測試數據與成果表單上傳至 GitHub，完成安全隱私防禦。
+
