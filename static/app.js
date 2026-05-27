@@ -1103,11 +1103,21 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const masterCardActions = document.querySelector(".master-table-card .card-actions");
         if (masterCardActions) {
-            if (totalParts > 0 || isStaticMode) {
-                masterCardActions.style.display = "flex";
+            masterCardActions.style.display = "flex"; // Always show action bar for 'Add Part'
+            
+            const btnClearDatabase = document.getElementById("btnClearDatabase");
+            const btnExportExcel = document.getElementById("btnExportExcel");
+            const btnExportJson = document.getElementById("btnExportJson");
+            
+            if (totalParts > 0) {
+                if (btnClearDatabase) btnClearDatabase.style.display = "inline-flex";
+                if (btnExportExcel) btnExportExcel.style.display = "inline-flex";
+                if (btnExportJson) btnExportJson.style.display = "inline-flex";
                 inputSearch.disabled = false;
             } else {
-                masterCardActions.style.display = "none";
+                if (btnClearDatabase) btnClearDatabase.style.display = "none";
+                if (btnExportExcel) btnExportExcel.style.display = "none";
+                if (btnExportJson) btnExportJson.style.display = "none";
                 inputSearch.disabled = true;
             }
         }

@@ -1,5 +1,28 @@
 # Development Log
 
+## 2026-05-27 - Performance Optimization and Persistence Fix (v1.5.1)
+
+### Scope
+
+- **前端大數據防凍結 (Event Delegation & DocumentFragment)**：優化表格渲染邏輯，防止在匯入包含大量產品型號的總表時導致瀏覽器主線程阻塞。
+- **後台匯入資料即時存檔**：在上傳 Excel / JSON 總表檔案時，實時將解析數據持久化寫入硬碟 `ppov_database.json`，防止刷新後數據遺失。
+- **PDCA 確效循環**：編編並執行自動化 `pdca_test.py` 測試上傳、存檔、修改、清空完整迴圈。
+
+### Today's Changes Summary
+
+1. **app.py**：在 `load_master_file` 中新增對 `save_db_to_file()` 的調用，實現匯入即存檔。
+2. **static/app.js**：
+   - 移除 `renderMasterTable` 迴圈中逐行綁定點擊與 CRUD 事件監聽器的動作。
+   - 在主載體 `tbodyMaster` 綁定全局點擊委派監聽器，秒級響應行點擊、編輯、刪除事件。
+   - 表格渲染改用 `DocumentFragment` 進行一次性 DOM 樹掛載，大幅優化排版抖動。
+3. **templates/index.html & index.html**：將 static CSS 與 JS 的引入版本號從 `v1.5.0` 升級為 `v1.5.1`，進行緩存刷新（Cache Busting）。
+
+### Verification Notes
+
+- `python -m py_compile app.py main.py` passed.
+- `node --check static/app.js` passed.
+- Automated PDCA test suite `pdca_test.py` simulated file uploads, persisted file checks, and CRUD regressions. 100% of cases passed successfully.
+
 ## 2026-05-27 - Database Management Admin Dashboard Integration (v1.5.0)
 
 ### Scope
