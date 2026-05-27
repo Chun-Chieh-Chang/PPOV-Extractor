@@ -90,6 +90,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnExportPartSpec = document.getElementById("btnExportPartSpec");
     const btnInputInspection = document.getElementById("btnInputInspection");
 
+    // New database and dashboard DOM elements
+    const btnAddNewPart = document.getElementById("btnAddNewPart");
+    const btnClearDatabase = document.getElementById("btnClearDatabase");
+    const partEditModal = document.getElementById("partEditModal");
+    const btnCloseEditModal = document.getElementById("btnCloseEditModal");
+    const btnCancelEditModal = document.getElementById("btnCancelEditModal");
+    const btnSavePartEdit = document.getElementById("btnSavePartEdit");
+    const formPartEdit = document.getElementById("formPartEdit");
+    const lblModalTitle = document.getElementById("lblModalTitle");
+    
+    // Stats dashboard widgets
+    const txtStatsTotalParts = document.getElementById("txtStatsTotalParts");
+    const txtStatsTotalFiles = document.getElementById("txtStatsTotalFiles");
+    const txtStatsTotalPresses = document.getElementById("txtStatsTotalPresses");
+    const txtStatsLastSync = document.getElementById("txtStatsLastSync");
+
     // Version Control UI Modal Elements
     const btnVersion = document.getElementById("btnVersion");
     const versionModal = document.getElementById("versionModal");
@@ -393,7 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (displayData.length === 0) {
             tbodyMaster.innerHTML = `
                 <tr>
-                    <td colspan="5" class="empty-table-state">
+                    <td colspan="6" class="empty-table-state">
                         <i class="fa-solid fa-folder-open empty-icon"></i>
                         <p>未找到符合條件的數據</p>
                     </td>
@@ -410,6 +426,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${item["圖面版次"] || "N/A"}</td>
                 <td>${item["模具編號"] || "N/A"}</td>
                 <td>${item["射出成型機編號"] || "N/A"}</td>
+                <td>
+                    <div class="row-actions">
+                        <button class="btn-icon-action btn-edit-row" title="編輯品號"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-icon-action btn-delete-row" title="刪除品號"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </td>
             `;
 
             // Highlight selected row
@@ -424,8 +446,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderSpecSheet(item);
             });
 
+            // Bind Edit Row Action
+            const btnEditRow = tr.querySelector(".btn-edit-row");
+            if (btnEditRow) {
+                btnEditRow.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    openEditModal(item);
+                });
+            }
+
+            // Bind Delete Row Action
+            const btnDeleteRow = tr.querySelector(".btn-delete-row");
+            if (btnDeleteRow) {
+                btnDeleteRow.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    deletePartRecord(item["產品型號"]);
+                });
+            }
+
             tbodyMaster.appendChild(tr);
         });
+
+        // Update statistics cards
+        updateStatistics();
     }
 
     // --- RENDER SPECIFICATION SHEET ---
@@ -1008,6 +1051,338 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // --- NEW DATABASE & DASHBOARD CRUD CONTROLS (V1.5.0 Upgrade) ---
+
+    // 1. Statistics dynamic update
+    function updateStatistics() {
+        if (!txtStatsTotalParts) return;
+        
+        const totalParts = state.items.length;
+        txtStatsTotalParts.textContent = totalParts;
+        
+        const pdfFiles = new Set();
+        state.items.forEach(item => {
+            const fileName = item["檔案名稱"] || "";
+            if (fileName && !fileName.startsWith("MANUAL_")) {
+                pdfFiles.add(fileName);
+            }
+        });
+        txtStatsTotalFiles.textContent = pdfFiles.size;
+        
+        const presses = new Set();
+        state.items.forEach(item => {
+            const pressNo = (item["射出成型機編號"] || "").trim().toUpperCase();
+            if (pressNo && pressNo !== "N/A" && pressNo !== "未知" && pressNo !== "-") {
+                presses.add(pressNo);
+            }
+        });
+        txtStatsTotalPresses.textContent = presses.size;
+        
+        if (!state.lastSyncTime) {
+            const now = new Date();
+            state.lastSyncTime = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        }
+        txtStatsLastSync.textContent = state.lastSyncTime;
+        
+        badgeCount.textContent = totalParts;
+        
+        const masterCardActions = document.querySelector(".master-table-card .card-actions");
+        if (masterCardActions) {
+            if (totalParts > 0 || isStaticMode) {
+                masterCardActions.style.display = "flex";
+                inputSearch.disabled = false;
+            } else {
+                masterCardActions.style.display = "none";
+                inputSearch.disabled = true;
+            }
+        }
+    }
+
+    // 2. Open Edit/Add Modal
+    function openEditModal(item = null) {
+        if (!partEditModal) return;
+        formPartEdit.reset();
+        
+        if (item) {
+            lblModalTitle.textContent = `編輯品號規格數據 - ${item["產品型號"]}`;
+            const partNoField = document.getElementById("edit_part_no");
+            partNoField.value = item["產品型號"];
+            partNoField.disabled = true;
+            
+            const inputs = formPartEdit.querySelectorAll("input, select");
+            inputs.forEach(input => {
+                const name = input.getAttribute("name");
+                if (name && name !== "產品型號") {
+                    const val = item[name];
+                    input.value = (val !== undefined && val !== null) ? val : "";
+                }
+            });
+        } else {
+            lblModalTitle.textContent = "手動新增品號規格數據";
+            const partNoField = document.getElementById("edit_part_no");
+            partNoField.value = "";
+            partNoField.disabled = false;
+            
+            const inputs = formPartEdit.querySelectorAll("input");
+            inputs.forEach(input => {
+                if (input.id !== "edit_part_no") {
+                    input.value = "";
+                }
+            });
+            const selUnit = formPartEdit.querySelector("select");
+            if (selUnit) selUnit.value = "kg/cm²";
+        }
+        
+        partEditModal.classList.add("active");
+        
+        setTimeout(() => {
+            const editPartNo = document.getElementById("edit_part_no");
+            if (editPartNo && !editPartNo.disabled) {
+                editPartNo.focus();
+            } else {
+                const editPartName = document.getElementById("edit_part_name");
+                if (editPartName) editPartName.focus();
+            }
+        }, 100);
+    }
+
+    // 3. Save part data edit
+    async function savePartEdit() {
+        const editPartNoField = document.getElementById("edit_part_no");
+        const partNo = editPartNoField.value.trim();
+        if (!partNo) {
+            alert("請填寫產品型號 (品號)！");
+            return;
+        }
+        
+        const record = {};
+        const inputs = formPartEdit.querySelectorAll("input, select");
+        inputs.forEach(input => {
+            const name = input.getAttribute("name");
+            if (name) {
+                record[name] = input.value.trim();
+            }
+        });
+        record["產品型號"] = partNo;
+        
+        const isEdit = editPartNoField.disabled;
+        
+        if (isStaticMode) {
+            if (isEdit) {
+                const idx = state.items.findIndex(item => item["產品型號"] === partNo);
+                if (idx !== -1) {
+                    const oldItem = state.items[idx];
+                    state.items[idx] = { ...oldItem, ...record };
+                }
+            } else {
+                if (state.items.some(item => item["產品型號"] === partNo)) {
+                    alert(`品號 ${partNo} 已存在於資料庫中！`);
+                    return;
+                }
+                record["檔案名稱"] = `MANUAL_${partNo}.pdf`;
+                state.items.push(record);
+            }
+            
+            partEditModal.classList.remove("active");
+            renderMasterTable(state.items);
+            
+            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                state.selectedItem = state.items.find(item => item["產品型號"] === partNo);
+                renderSpecSheet(state.selectedItem);
+            }
+            alert(isEdit ? "品號規格修改成功！" : "品號規格新增成功！");
+            return;
+        }
+        
+        try {
+            btnSavePartEdit.disabled = true;
+            btnSavePartEdit.textContent = "儲存中...";
+            
+            const endpoint = isEdit ? "/api/db/edit" : "/api/db/add";
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(record)
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                state.items = result.data;
+                partEditModal.classList.remove("active");
+                renderMasterTable(state.items);
+                
+                if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                    state.selectedItem = state.items.find(item => item["產品型號"] === partNo);
+                    renderSpecSheet(state.selectedItem);
+                }
+                alert(result.message || "儲存成功！");
+            } else {
+                alert(result.message || "儲存失敗！");
+            }
+        } catch (error) {
+            console.error("Save edit error:", error);
+            alert("伺服器通訊錯誤");
+        } finally {
+            btnSavePartEdit.disabled = false;
+            btnSavePartEdit.textContent = "儲存變更";
+        }
+    }
+
+    // 4. Delete part record
+    async function deletePartRecord(partNo) {
+        if (!partNo) return;
+        const confirmDelete = confirm(`⚠️ 確定要刪除品號 ${partNo} 嗎？\n\n此動作將從資料庫中永久移除該筆規格數據！`);
+        if (!confirmDelete) return;
+        
+        if (isStaticMode) {
+            state.items = state.items.filter(item => item["產品型號"] !== partNo);
+            renderMasterTable(state.items);
+            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                state.selectedItem = null;
+                blankPartState.style.display = "flex";
+                partSpecCard.style.display = "none";
+            }
+            alert(`品號 ${partNo} 已在本地刪除！`);
+            return;
+        }
+        
+        try {
+            const response = await fetch("/api/db/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ part_no: partNo })
+            });
+            const result = await response.json();
+            if (result.success) {
+                state.items = result.data;
+                renderMasterTable(state.items);
+                if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                    state.selectedItem = null;
+                    blankPartState.style.display = "flex";
+                    partSpecCard.style.display = "none";
+                }
+                alert(result.message || "刪除成功！");
+            } else {
+                alert(result.message || "刪除失敗！");
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("刪除要求傳送失敗");
+        }
+    }
+
+    // 5. Clear Database
+    async function clearDatabase() {
+        const confirmClear = confirm(`⚠️ 警告：這將會徹底清空資料庫內的所有 PPOV 規格數據！\n\n此操作無法還原，確定要執行嗎？`);
+        if (!confirmClear) return;
+        
+        if (isStaticMode) {
+            state.items = [];
+            renderMasterTable(state.items);
+            state.selectedItem = null;
+            blankPartState.style.display = "flex";
+            partSpecCard.style.display = "none";
+            alert("本地規格資料庫已完全清空！");
+            return;
+        }
+        
+        try {
+            const response = await fetch("/api/db/clear", { method: "POST" });
+            const result = await response.json();
+            if (result.success) {
+                state.items = [];
+                renderMasterTable(state.items);
+                state.selectedItem = null;
+                blankPartState.style.display = "flex";
+                partSpecCard.style.display = "none";
+                alert(result.message || "資料庫清空成功！");
+            } else {
+                alert(result.message || "清空失敗！");
+            }
+        } catch (error) {
+            console.error("Clear database error:", error);
+            alert("清空要求傳送失敗");
+        }
+    }
+
+    // 6. Bind Modal Event Listeners
+    if (btnAddNewPart) {
+        btnAddNewPart.addEventListener("click", () => openEditModal(null));
+    }
+    
+    if (btnClearDatabase) {
+        btnClearDatabase.addEventListener("click", clearDatabase);
+    }
+    
+    if (btnCloseEditModal) {
+        btnCloseEditModal.addEventListener("click", () => partEditModal.classList.remove("active"));
+    }
+    
+    if (btnCancelEditModal) {
+        btnCancelEditModal.addEventListener("click", () => partEditModal.classList.remove("active"));
+    }
+    
+    if (btnSavePartEdit) {
+        btnSavePartEdit.addEventListener("click", savePartEdit);
+    }
+    
+    if (partEditModal) {
+        partEditModal.addEventListener("click", (e) => {
+            if (e.target === partEditModal) {
+                partEditModal.classList.remove("active");
+            }
+        });
+        
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && partEditModal.classList.contains("active")) {
+                partEditModal.classList.remove("active");
+            }
+        });
+    }
+
+    // 7. Modal Form Enter Key Navigation
+    const setupModalFormNavigation = () => {
+        if (!formPartEdit) return;
+        const inputs = formPartEdit.querySelectorAll("input, select");
+        inputs.forEach((input, idx) => {
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    const next = inputs[idx + 1];
+                    if (next) {
+                        next.focus();
+                    } else {
+                        savePartEdit();
+                    }
+                }
+            });
+        });
+    };
+    setupModalFormNavigation();
+
+    // 8. Initial Database Fetch (Flask Mode only)
+    async function initFetchDatabase() {
+        if (isStaticMode) {
+            updateStatistics();
+            return;
+        }
+        try {
+            const response = await fetch("/api/db");
+            const result = await response.json();
+            if (result.success && result.count > 0) {
+                state.items = result.data;
+                renderMasterTable(state.items);
+                txtCurrentFolder.textContent = `資料庫已連線，共收錄 ${result.count} 筆規格數據`;
+            } else {
+                updateStatistics();
+            }
+        } catch (err) {
+            console.warn("DB init fetch failed:", err);
+            updateStatistics();
+        }
+    }
+    
+    initFetchDatabase();
 
 });
 

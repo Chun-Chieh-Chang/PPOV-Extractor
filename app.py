@@ -33,6 +33,31 @@ db = {
     "last_folder": ""
 }
 
+def get_db_file_path():
+    return os.path.join(BASE_PATH, "ppov_database.json")
+
+def load_db_from_file():
+    db_path = get_db_file_path()
+    if os.path.exists(db_path):
+        try:
+            with open(db_path, "r", encoding="utf-8") as f:
+                db["extracted_data"] = json.load(f)
+            print(f"Loaded {len(db['extracted_data'])} records from ppov_database.json")
+        except Exception as e:
+            print(f"Error loading ppov_database.json: {e}")
+            db["extracted_data"] = []
+    else:
+        db["extracted_data"] = []
+
+def save_db_to_file():
+    db_path = get_db_file_path()
+    try:
+        with open(db_path, "w", encoding="utf-8") as f:
+            json.dump(db["extracted_data"], f, ensure_ascii=False, indent=2)
+        print(f"Successfully saved {len(db['extracted_data'])} records to ppov_database.json")
+    except Exception as e:
+        print(f"Error saving ppov_database.json: {e}")
+
 def load_config():
     config_path = os.path.join(BASE_PATH, "config.json")
     try:
@@ -40,6 +65,7 @@ def load_config():
             db["config"] = json.load(f)
     except Exception as e:
         print(f"Error loading config.json: {e}")
+    load_db_from_file()
 
 @app.route("/")
 def index():
@@ -64,17 +90,117 @@ def select_folder():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
+@app.route("/api/db", methods=["GET"])
+def get_database():
+    if not db["config"]:
+        load_config()
+    load_db_from_file()
+    return jsonify({
+        "success": True,
+        "count": len(db["extracted_data"]),
+        "data": db["extracted_data"],
+        "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
+    })
+
+@app.route("/api/db/add", methods=["POST"])
+def db_add_record():
+    new_record = request.json
+    if not new_record or not new_record.get("產品型號"):
+        return jsonify({"success": False, "message": "產品型號（品號）為必填項"})
+    
+    part_no = new_record.get("產品型號").strip()
+    
+    # Check duplicate
+    if any(item.get("產品型號") == part_no for item in db["extracted_data"]):
+        return jsonify({"success": False, "message": f"品號 {part_no} 已存在於資料庫中"})
+    
+    # Supply defaults
+    if not new_record.get("檔案名稱"):
+        new_record["檔案名稱"] = f"MANUAL_{part_no}.pdf"
+        
+    db["extracted_data"].append(new_record)
+    save_db_to_file()
+    
+    return jsonify({
+        "success": True, 
+        "message": f"品號 {part_no} 新增成功", 
+        "data": db["extracted_data"]
+    })
+
+@app.route("/api/db/edit", methods=["POST"])
+def db_edit_record():
+    edit_data = request.json
+    if not edit_data or not edit_data.get("產品型號"):
+        return jsonify({"success": False, "message": "無效的修改請求，品號必填"})
+        
+    part_no = edit_data.get("產品型號").strip()
+    
+    # Find and update
+    found = False
+    for i, item in enumerate(db["extracted_data"]):
+        if item.get("產品型號") == part_no:
+            # Update values
+            for k, v in edit_data.items():
+                item[k] = v
+            found = True
+            break
+            
+    if not found:
+        return jsonify({"success": False, "message": f"在資料庫中找不到品號 {part_no}"})
+        
+    save_db_to_file()
+    return jsonify({
+        "success": True, 
+        "message": f"品號 {part_no} 修改成功", 
+        "data": db["extracted_data"]
+    })
+
+@app.route("/api/db/delete", methods=["POST"])
+def db_delete_record():
+    payload = request.json or {}
+    part_no = payload.get("part_no")
+    if not part_no:
+        return jsonify({"success": False, "message": "無效的刪除請求，品號必填"})
+        
+    initial_len = len(db["extracted_data"])
+    db["extracted_data"] = [item for item in db["extracted_data"] if item.get("產品型號") != part_no]
+    
+    if len(db["extracted_data"]) == initial_len:
+        return jsonify({"success": False, "message": f"在資料庫中找不到品號 {part_no}"})
+        
+    save_db_to_file()
+    return jsonify({
+        "success": True, 
+        "message": f"品號 {part_no} 刪除成功", 
+        "data": db["extracted_data"]
+    })
+
+@app.route("/api/db/clear", methods=["POST"])
+def db_clear():
+    db["extracted_data"] = []
+    save_db_to_file()
+    return jsonify({
+        "success": True, 
+        "message": "資料庫已完全清空", 
+        "data": []
+    })
+
 @app.route("/api/extract", methods=["POST"])
 def extract_data():
-    """Performs extraction on all PDF files in the selected folder."""
+    """Performs incremental extraction on PDF files in the selected folder."""
     data_payload = request.json or {}
     folder_path = data_payload.get("path", db["last_folder"])
+    is_incremental = data_payload.get("incremental", True)
     
     if not folder_path or not os.path.exists(folder_path):
         return jsonify({"success": False, "message": "無效的資料夾路徑"})
     
     if not db["config"]:
         load_config()
+    
+    # Ensure DB is loaded
+    if not db["extracted_data"]:
+        load_db_from_file()
         
     pdf_files = []
     for root, dirs, files in os.walk(folder_path):
@@ -85,20 +211,46 @@ def extract_data():
     if not pdf_files:
         return jsonify({"success": False, "message": "此資料夾內無任何 PDF 檔案"})
         
-    results = []
-    for pdf_path in pdf_files:
+    # Incremental sync: filter out already processed PDF files
+    existing_filenames = {item.get("檔案名稱") for item in db["extracted_data"] if item.get("檔案名稱")}
+    
+    if is_incremental:
+        files_to_process = [p for p in pdf_files if os.path.basename(p) not in existing_filenames]
+    else:
+        files_to_process = pdf_files
+        
+    if not files_to_process:
+        return jsonify({
+            "success": True, 
+            "message": "所有 PDF 檔案皆已在資料庫中，無需同步！",
+            "count": len(db["extracted_data"]), 
+            "data": db["extracted_data"],
+            "fields": [f["name"] for f in db["config"]["fields_to_extract"]]
+        })
+        
+    new_results = []
+    for pdf_path in files_to_process:
         try:
             data = extract_data_from_pdf(pdf_path, db["config"])
             if data:
-                results.append(data)
+                new_results.append(data)
         except Exception as e:
             print(f"Error processing {pdf_path}: {e}")
             
-    db["extracted_data"] = results
+    if is_incremental:
+        existing_by_file = {item.get("檔案名稱"): item for item in db["extracted_data"] if item.get("檔案名稱")}
+        for item in new_results:
+            existing_by_file[item.get("檔案名稱")] = item
+        db["extracted_data"] = list(existing_by_file.values())
+    else:
+        db["extracted_data"] = new_results
+        
+    save_db_to_file()
+    
     return jsonify({
         "success": True, 
-        "count": len(results), 
-        "data": results,
+        "count": len(db["extracted_data"]), 
+        "data": db["extracted_data"],
         "fields": [f["name"] for f in db["config"]["fields_to_extract"]]
     })
 

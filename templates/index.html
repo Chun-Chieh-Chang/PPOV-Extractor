@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.4.0">
+    <link rel="stylesheet" href="static/style.css?v=1.5.0">
 </head>
 <body>
     <div class="glass-bg-container">
@@ -28,7 +28,7 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.4.0</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.5.0</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
@@ -42,10 +42,46 @@
                 <i class="fa-solid fa-folder-open"></i> 選擇資料夾
             </button>
             <button id="btnStartExtract" class="btn btn-primary" disabled>
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 開始提取
+                <i class="fa-solid fa-rotate"></i> 自動同步
             </button>
         </div>
     </header>
+
+    <!-- 頂部高質感數據統計看板 (Premium Stats Dashboard Card Grid) -->
+    <section class="stats-dashboard-grid">
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-database"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">總收錄品號數</span>
+                <h3 id="txtStatsTotalParts" class="stats-value">0</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-file-pdf"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">解析 PDF 檔案數</span>
+                <h3 id="txtStatsTotalFiles" class="stats-value">0</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-industry"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">運作射出機台數</span>
+                <h3 id="txtStatsTotalPresses" class="stats-value">0</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">資料庫同步時間</span>
+                <h3 id="txtStatsLastSync" class="stats-value">N/A</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+    </section>
 
     <main class="app-main-layout">
         <!-- LEFT PANEL: CONTROLS & MASTER TABLE -->
@@ -60,23 +96,27 @@
                         <div class="progress-fill" id="progressFill"></div>
                     </div>
                     <div class="progress-text">
-                        <span>正在提取 PDF 檔案...</span>
+                        <span>正在同步 PDF 檔案...</span>
                         <span id="txtProgressPercent">0%</span>
                     </div>
                 </div>
             </div>
 
-
-
             <div class="card master-table-card">
                 <div class="card-header">
                     <div class="card-title">
-                        <i class="fa-solid fa-list-check"></i> 數據匯總表 (Master Table)
+                        <i class="fa-solid fa-list-check"></i> 數據彙總資料庫 (Master Table)
                         <span id="badgeCount" class="badge">0</span>
                     </div>
                     <div class="card-actions" id="masterExportGroup" style="display: none;">
+                        <button id="btnAddNewPart" class="btn btn-sm btn-primary">
+                            <i class="fa-solid fa-plus"></i> 新增品號
+                        </button>
+                        <button id="btnClearDatabase" class="btn btn-sm btn-danger">
+                            <i class="fa-solid fa-trash-can"></i> 清空資料庫
+                        </button>
                         <button id="btnExportExcel" class="btn btn-sm btn-success">
-                            <i class="fa-solid fa-file-excel"></i> 匯出總表 Excel
+                            <i class="fa-solid fa-file-excel"></i> 匯出 Excel 總表
                         </button>
                         <button id="btnExportJson" class="btn btn-sm btn-json">
                             <i class="fa-solid fa-file-code"></i> 匯出 JSON
@@ -98,13 +138,14 @@
                                 <th data-sort-key="圖面版次" class="sortable">版次 <i class="fa-solid fa-sort sort-icon"></i></th>
                                 <th data-sort-key="模具編號" class="sortable">模具編號 <i class="fa-solid fa-sort sort-icon"></i></th>
                                 <th data-sort-key="射出成型機編號" class="sortable">機台編號 <i class="fa-solid fa-sort sort-icon"></i></th>
+                                <th class="table-actions-header">動作</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyMaster">
                             <tr>
-                                <td colspan="5" class="empty-table-state">
+                                <td colspan="6" class="empty-table-state">
                                     <i class="fa-solid fa-file-import empty-icon"></i>
-                                    <p>請選擇資料夾並匯入 PDF 檔案以顯示數據</p>
+                                    <p>請選擇資料夾並進行自動同步，或手動新增/載入數據</p>
                                 </td>
                             </tr>
                         </tbody>
@@ -373,9 +414,179 @@
                     </div>
                 </div>
             </div>
+    <!-- 新增/編輯品號規格彈窗 (Add/Edit Part Specification Modal) -->
+    <div id="partEditModal" class="modal-overlay">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square" style="color: var(--color-accent-blue);"></i> <span id="lblModalTitle">手動新增/編輯品號規格</span></h3>
+                <button class="modal-close" id="btnCloseEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formPartEdit" onsubmit="return false;">
+                    <!-- 1. 基本資訊組 -->
+                    <div class="form-section">
+                        <h4><i class="fa-solid fa-circle-info"></i> 基本資訊 (Basic Info)</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="edit_part_no">產品型號 (品號) *</label>
+                                <input type="text" id="edit_part_no" name="產品型號" required placeholder="例如 A02-210-251">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_part_name">產品名稱</label>
+                                <input type="text" id="edit_part_name" name="產品名稱" placeholder="例如 UPPER SHELL">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_drawing_rev">圖面版次</label>
+                                <input type="text" id="edit_drawing_rev" name="圖面版次" placeholder="例如 Rev.B">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_mold_no">模具編號</label>
+                                <input type="text" id="edit_mold_no" name="模具編號" placeholder="例如 M-202506">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_cavitation">模具穴數</label>
+                                <input type="text" id="edit_cavitation" name="模具穴數" placeholder="例如 1x4">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_press_no">射出成型機編號</label>
+                                <input type="text" id="edit_press_no" name="射出成型機編號" placeholder="例如 INJ-08">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_press_tonnage">成型機噸數</label>
+                                <input type="text" id="edit_press_tonnage" name="射出成型機噸數" placeholder="例如 120ton">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_screw_dia">螺桿尺寸</label>
+                                <input type="text" id="edit_screw_dia" name="螺桿尺寸" placeholder="例如 32mm">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_material_no">原料料號</label>
+                                <input type="text" id="edit_material_no" name="原料料號" placeholder="例如 ABS-GP123">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_drying_cond">烘料條件</label>
+                                <input type="text" id="edit_drying_cond" name="烘料條件" placeholder="例如 80℃ / 3hr">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 關鍵製程參數組 -->
+                    <div class="form-section">
+                        <h4><i class="fa-solid fa-sliders"></i> 關鍵成型參數目標與上下限</h4>
+                        <div class="form-table-wrapper">
+                            <table class="form-params-table">
+                                <thead>
+                                    <tr>
+                                        <th>參數項目</th>
+                                        <th>目標值 (Target)</th>
+                                        <th>下限值 (Low)</th>
+                                        <th>上限值 (High)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>實際融膠溫度 (℃)</td>
+                                        <td><input type="text" name="實際融膠溫度_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="實際融膠溫度_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="實際融膠溫度_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>填充時間 (s)</td>
+                                        <td><input type="text" name="填充時間_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="填充時間_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="填充時間_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>產品充填重量 (g)</td>
+                                        <td><input type="text" name="充填階段的產品平均重量_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="充填階段的產品平均重量_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="充填階段的產品平均重量_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>保壓壓力 (kg/cm² 或 bar)</td>
+                                        <td><input type="text" name="保壓壓力_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓壓力_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓壓力_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>保壓時間 (s)</td>
+                                        <td><input type="text" name="保壓時間_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓時間_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓時間_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>保壓完產品重量 (g)</td>
+                                        <td><input type="text" name="保壓完的產品平均重量_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓完的產品平均重量_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓完的產品平均重量_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>冷卻時間 (s)</td>
+                                        <td><input type="text" name="冷卻時間_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="冷卻時間_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="冷卻時間_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>模具溫度設定-母模 (℃)</td>
+                                        <td><input type="text" name="模具溫度設定-母模_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-母模_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-母模_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>模具溫度設定-公模 (℃)</td>
+                                        <td><input type="text" name="模具溫度設定-公模_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-公模_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-公模_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>模具溫度設定-滑塊 (℃)</td>
+                                        <td><input type="text" name="模具溫度設定-滑塊_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-滑塊_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-滑塊_上限值" placeholder="-"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3. 參考參數組 -->
+                    <div class="form-section">
+                        <h4><i class="fa-solid fa-compass"></i> 參考規格參數</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>充填階段模重 (g)</label>
+                                <input type="text" name="充填階段的模重_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>保壓完模重 (g)</label>
+                                <input type="text" name="保壓完的模重_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>鎖模力設定 (ton)</label>
+                                <input type="text" name="鎖模力_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>生產週期時間 (s)</label>
+                                <input type="text" name="週期時間_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>保壓壓力勾稽單位</label>
+                                <select name="_單位_保壓壓力">
+                                    <option value="kg/cm²">kg/cm²</option>
+                                    <option value="bar">bar</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelEditModal">取消</button>
+                <button type="button" class="btn btn-primary" id="btnSavePartEdit">儲存變更</button>
+            </div>
         </div>
     </div>
 
-    <script src="static/app.js?v=1.4.0"></script>
+    <script src="static/app.js?v=1.5.0"></script>
 </body>
 </html>
