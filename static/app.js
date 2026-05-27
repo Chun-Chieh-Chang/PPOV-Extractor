@@ -1332,32 +1332,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 6. Bind Modal & File Input Event Listeners
-    if (btnAddNewPart && inputSinglePdf) {
-        btnAddNewPart.addEventListener("click", () => {
+    if (btnAddNewPart) {
+        btnAddNewPart.addEventListener("click", async () => {
             if (isStaticMode) {
                 alert("💡 提示：從單一 PDF 解析規格需要 Python 後端伺服器運行。\n\n在 GitHub 靜態展示頁面中，請使用上方『載入現有總表』直接選擇總表 Excel 載入數據！");
                 return;
             }
-            inputSinglePdf.value = "";
-            inputSinglePdf.click();
-        });
-
-        // 監聽單一 PDF 上傳與自動提取事件 (V1.5.2 核心自動化升級)
-        inputSinglePdf.addEventListener("change", async () => {
-            const file = inputSinglePdf.files[0];
-            if (!file) return;
-
+            
             btnAddNewPart.disabled = true;
             const originalHtml = btnAddNewPart.innerHTML;
-            btnAddNewPart.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 導入中...`;
+            btnAddNewPart.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在選擇...`;
 
             try {
-                const formData = new FormData();
-                formData.append("file", file);
-
-                const response = await fetch("/api/db/import_pdf", {
-                    method: "POST",
-                    body: formData
+                const response = await fetch("/api/db/import_pdf_native", {
+                    method: "POST"
                 });
                 const result = await response.json();
 
@@ -1366,9 +1354,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     renderMasterTable(state.items);
                     
                     // 自動搜尋並選取剛導入的品號，以實現即時渲染預覽
-                    const match = result.message.match(/品號\s*([^\s已]+)/);
-                    if (match && match[1]) {
-                        const newPartNo = match[1].trim();
+                    const newPartNo = result.last_part_no;
+                    if (newPartNo) {
                         const foundItem = state.items.find(x => x["產品型號"] === newPartNo);
                         if (foundItem) {
                             state.selectedItem = foundItem;
@@ -1389,7 +1376,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     alert(result.message);
                 } else {
-                    alert(result.message || "PDF 導入失敗！");
+                    if (result.message && result.message !== "未選擇任何 PDF 檔案") {
+                        alert(result.message || "PDF 導入失敗！");
+                    }
                 }
             } catch (err) {
                 console.error("Single PDF import error:", err);

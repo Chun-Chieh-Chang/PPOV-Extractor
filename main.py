@@ -386,6 +386,54 @@ def _save_file_dialog(title: str, default_filename: str, file_types: list) -> st
         except Exception:
             return ""
 
+def _select_files_dialog(title: str, initial_dir: str = None, file_types: list = None) -> list:
+    """顯示檔案選擇彈窗，支援多選，返回使用者選擇的檔案路徑列表；取消則返回空列表。"""
+    import subprocess
+    import sys
+    try:
+        file_types_str = str(file_types or [("PDF Files", "*.pdf"), ("All Files", "*.*")])
+        # 用獨立的 python 子進程開啟 tkinter filedialog.askopenfilenames
+        # 將所選路徑以分號隔開輸出，方便解析
+        cmd = [
+            sys.executable,
+            "-c",
+            "import tkinter as tk; "
+            "from tkinter import filedialog; "
+            "root = tk.Tk(); "
+            "root.withdraw(); "
+            "root.attributes('-topmost', True); "
+            f"paths = filedialog.askopenfilenames(title={repr(title)}, initialdir={repr(initial_dir or '')}, filetypes={file_types_str}); "
+            "print(';'.join(paths) if paths else '')"
+        ]
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = 0x08000000
+            
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            creationflags=creationflags
+        )
+        out = result.stdout.strip()
+        if out:
+            return [p.strip() for p in out.split(";")]
+        return []
+    except Exception as e:
+        print(f"Subprocess askopenfilenames error: {e}")
+        if not _TK_AVAILABLE:
+            return []
+        try:
+            root = _tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            paths = _filedialog.askopenfilenames(title=title, initialdir=initial_dir or os.getcwd(), filetypes=file_types or [("PDF Files", "*.pdf"), ("All Files", "*.*")])
+            root.destroy()
+            return list(paths) if paths else []
+        except Exception:
+            return []
+
 
 
 

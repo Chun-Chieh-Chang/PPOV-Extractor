@@ -20,7 +20,7 @@ BASE_PATH = get_base_path()
 
 # Ensure workspace is in python path
 sys.path.append(BASE_PATH)
-from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dialog
+from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dialog, _select_files_dialog
 
 app = Flask(__name__, 
             static_folder=os.path.join(BASE_PATH, 'static'),
@@ -250,6 +250,83 @@ def db_import_single_pdf():
             "message": msg,
             "count": len(db["extracted_data"]),
             "data": db["extracted_data"],
+            "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route("/api/db/import_pdf_native", methods=["POST"])
+def db_import_pdf_native():
+    """透過後端原生 OS 檔案選擇視窗導入一或多個 PPOV PDF 檔案並自動解析、存檔。"""
+    try:
+        # 顯示原生檔案多選彈窗
+        selected_files = _select_files_dialog(
+            title="選擇 PPOV PDF 規格書檔案 (可多選)",
+            initial_dir=db["last_folder"] or BASE_PATH,
+            file_types=[("PDF Files", "*.pdf")]
+        )
+        
+        if not selected_files:
+            return jsonify({"success": False, "message": "未選擇任何 PDF 檔案"})
+            
+        if not db["config"]:
+            load_config()
+            
+        load_db_from_file()
+        
+        imported_parts = []
+        updated_count = 0
+        added_count = 0
+        
+        for filepath in selected_files:
+            if not os.path.exists(filepath):
+                continue
+            
+            # 更新 last_folder 為最後選擇檔案的資料夾
+            db["last_folder"] = os.path.dirname(filepath)
+            
+            # 調用核心提取函式
+            data = extract_data_from_pdf(filepath, db["config"])
+            if not data:
+                continue
+                
+            part_no = data.get("產品型號", "").strip()
+            if not part_no or part_no == "未找到":
+                continue
+                
+            # 檢查是否已存在，進行覆蓋/新增合併
+            existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("產品型號") == part_no), None)
+            
+            if existing_idx is not None:
+                db["extracted_data"][existing_idx] = data
+                updated_count += 1
+            else:
+                db["extracted_data"].append(data)
+                added_count += 1
+                
+            imported_parts.append(part_no)
+            
+        if not imported_parts:
+            return jsonify({"success": False, "message": "所選的檔案皆解析失敗或格式不符"})
+            
+        save_db_to_file()
+        
+        # 建立回報訊息
+        msg = f"成功導入 {len(imported_parts)} 筆規格！"
+        if added_count > 0:
+            msg += f" 新增 {added_count} 筆"
+        if updated_count > 0:
+            msg += f" 覆蓋/更新 {updated_count} 筆"
+            
+        # 若只導入單一品號，回傳該品號以便前端高亮與預覽
+        last_part_no = imported_parts[-1] if len(imported_parts) == 1 else None
+        
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "count": len(db["extracted_data"]),
+            "data": db["extracted_data"],
+            "last_part_no": last_part_no,
             "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
         })
     except Exception as e:
