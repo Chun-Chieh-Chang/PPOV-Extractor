@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.7.0">
+    <link rel="stylesheet" href="static/style.css?v=1.7.1">
 </head>
 <body>
     <!-- 高級毛玻璃登入遮罩 UI (Premium Glassmorphic Login Overlay) -->
@@ -61,7 +61,7 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.6.0</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.7.1</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
@@ -392,8 +392,68 @@
             </div>
             <div class="modal-body">
                 <div class="timeline">
-                    <!-- v1.4.0 -->
+                    <!-- v1.7.1 -->
                     <div class="timeline-item current">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.7.1 - 管理員密碼自助修改版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>密碼自助修改功能：允許管理員透過 UI 修改密碼，並即時持久化保存。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>安全邊界設計：密碼長度規範（≥6 字元）與舊密碼驗證。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>修改密碼 Modal：含 Shake 抖動錯誤動畫與成功自動關閉提示。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.7.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.7.0 - 修改密碼 UI 整合版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>在 User Profile 區新增藍色鑰匙按鈕，引導至密碼修改介面。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>前端 app.js 整合修改密碼端點監聽與非同步提交邏輯。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.6.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.6.0 - 單檔 PDF 自動化導入版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>「新增品號」對接單一 PDF 解析引擎，實現上傳即解析功能。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>後端 /api/db/import_pdf 端點，支援單檔解析與庫內增量合併。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>導入成功後自動搜尋、高亮、選中該品號並即時預覽。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.5.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.5.0 - 資料庫管理後台與 Morandi 視覺版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">核心</span>將工具升級為「規格數據庫後台管理面板」，支援完整 CRUD。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>冰藍莫蘭迪玻璃卡片設計，頂部配備 4 張動態統計看板。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>大數據渲染效能，採用 Event Delegation 與 DocumentFragment 防凍結。</li>
+                                <li><span class="timeline-tag tag-fix">修正</span>匯入資料即時持久化存檔，防止刷新後數據遺失。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.4.0 -->
+                    <div class="timeline-item">
                         <div class="timeline-badge"></div>
                         <div class="timeline-title">
                             <span>v1.4.0 - 欄位排序與遞迴子資料夾處理版</span>
@@ -683,6 +743,6 @@
         </div>
     </div>
 
-    <script src="static/app.js?v=1.7.0"></script>
+    <script src="static/app.js?v=1.7.1"></script>
 </body>
 </html>

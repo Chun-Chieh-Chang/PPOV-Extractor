@@ -12,7 +12,7 @@
 ### Today's Changes Summary
 
 1. **app.py**：新增 `POST /api/auth/change_password` 端點（`@admin_required`），讀取 `users.json` 驗證目前密碼後更新 SHA-256 雜湊並寫回檔案。
-2. **templates/index.html & index.html**：在 `userProfile` 區新增藍色鑰匙按鈕 (`btnChangePassword`)，並在 `partEditModal` 後插入修改密碼 Modal DOM（重用 `.modal-overlay` / `.glass-modal` 樣式）。版本號升至 `v1.7.0`（CSS + JS）。
+2. **templates/index.html & index.html**：在 `userProfile` 區新增藍色鑰匙按鈕 (`btnChangePassword`)，並在 `partEditModal` 後插入修改密碼 Modal DOM（重用 `.modal-overlay` / `.glass-modal` 樣式）。版本號升至 `v1.7.1`（CSS + JS）。
 3. **static/app.js**：新增 `changePasswordModal` 系列 DOM 變數、`openChangePasswordModal`、`closeChangePasswordModal`、`showCpError`、`showCpSuccess`、`setupChangePasswordListeners` 函式，整合背景點擊關閉與 2 秒自動關閉成功提示。
 4. **scratch/auth_test.py**：新增 `test_change_password_endpoint` 確效案例，5 個安全邊界均通過。
 

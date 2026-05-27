@@ -17,6 +17,8 @@ TestData/
 PPOV/
 input_pdfs/
 *.xlsx
+ppov_database.json
+users.json
 !config.json
 
 # PyInstaller Build
