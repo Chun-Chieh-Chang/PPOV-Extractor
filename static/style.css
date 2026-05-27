@@ -821,6 +821,152 @@ tbody tr.selected td {
     color: #EF4444;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   INSPECTION DATA INPUT - Edit Mode Styles
+   ═══════════════════════════════════════════════════════════════════ */
 
+/* Spec Card Header Button Group */
+.spec-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Inspection Edit Button (Brand Gradient) */
+.btn-inspect {
+    background: linear-gradient(135deg, #F59E0B, #F97316);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-inspect:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
+}
+
+/* Inspection Save Button (Active state) */
+.btn-inspect.editing {
+    background: linear-gradient(135deg, #10B981, #059669);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.btn-inspect.editing:hover {
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+    50% { box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5); }
+}
+
+/* AI Import Button (Disabled / Coming Soon) */
+.btn-ai-import {
+    background-color: rgba(148, 163, 184, 0.08);
+    color: #94A3B8;
+    border: 1px dashed rgba(148, 163, 184, 0.4);
+    cursor: not-allowed;
+    position: relative;
+}
+
+.btn-ai-import:hover {
+    background-color: rgba(148, 163, 184, 0.12);
+}
+
+/* Tooltip for AI Import */
+.btn-ai-import .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--color-text-primary);
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 20;
+}
+
+.btn-ai-import .tooltip-text::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--color-text-primary);
+}
+
+.btn-ai-import:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* ─── Edit Mode Table Styling ─── */
+.spec-table.edit-mode {
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.spec-table.edit-mode td.editable-cell {
+    background-color: rgba(245, 158, 11, 0.04);
+    position: relative;
+}
+
+/* Material-style underline input inside table cells */
+.spec-table td .inspect-input {
+    width: 100%;
+    border: none;
+    border-bottom: 2px solid rgba(180, 216, 231, 0.6);
+    background: transparent;
+    text-align: center;
+    font-family: 'Inter', 'Microsoft JhengHei', sans-serif;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    padding: 4px 2px;
+    outline: none;
+    transition: border-color 0.25s ease;
+    box-sizing: border-box;
+}
+
+.spec-table td .inspect-input:focus {
+    border-bottom-color: #F59E0B;
+    background-color: rgba(245, 158, 11, 0.03);
+}
+
+.spec-table td .inspect-input::placeholder {
+    color: rgba(148, 163, 184, 0.6);
+    font-size: 11px;
+}
+
+/* Filled value display (non-edit mode) */
+.spec-table td .inspect-value {
+    color: #F59E0B;
+    font-weight: 600;
+}
+
+/* Responsive: stack buttons on narrow screens */
+@media (max-width: 1200px) {
+    .spec-card-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    .spec-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    .spec-header-actions .btn {
+        flex: 1;
+        min-width: 140px;
+        justify-content: center;
+    }
+}
 
 

@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
         folderPath: "",
         items: [],
         selectedItem: null,
+        inspectionData: {}, // { partNo: { key: value, ... } }
+        isEditMode: false,
     };
 
     // Environment detection for GitHub Pages or local static file
@@ -50,6 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnExportExcel = document.getElementById("btnExportExcel");
     const btnExportJson = document.getElementById("btnExportJson");
     const btnExportPartSpec = document.getElementById("btnExportPartSpec");
+    const btnInputInspection = document.getElementById("btnInputInspection");
 
     // Version Control UI Modal Elements
     const btnVersion = document.getElementById("btnVersion");
@@ -359,6 +362,14 @@ document.addEventListener("DOMContentLoaded", () => {
         partSpecCard.style.display = "flex";
         txtSpecPartNo.textContent = item["產品型號"] || "未知品號";
 
+        // Exit edit mode when switching parts
+        if (state.isEditMode) {
+            exitEditMode();
+        }
+
+        // Show the inspection input button
+        btnInputInspection.style.display = "inline-flex";
+
         // Update each DOM grid item dynamically
         for (const [domId, key] of Object.entries(specFields)) {
             const element = document.getElementById(domId);
@@ -371,6 +382,113 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         }
+
+        // Restore saved inspection data if available for this part
+        const partNo = item["產品型號"];
+        const saved = state.inspectionData[partNo];
+        if (saved) {
+            document.querySelectorAll('[data-input-key]').forEach(td => {
+                const key = td.getAttribute('data-input-key');
+                if (saved[key]) {
+                    td.innerHTML = `<span class="inspect-value">${saved[key]}</span>`;
+                } else {
+                    td.textContent = '';
+                }
+            });
+        } else {
+            // Clear all editable cells
+            document.querySelectorAll('[data-input-key]').forEach(td => {
+                td.textContent = '';
+            });
+        }
+    }
+
+    // --- INSPECTION DATA INPUT MODE ---
+    btnInputInspection.addEventListener("click", () => {
+        if (state.isEditMode) {
+            exitEditMode();
+        } else {
+            enterEditMode();
+        }
+    });
+
+    function enterEditMode() {
+        state.isEditMode = true;
+        btnInputInspection.classList.add('editing');
+        btnInputInspection.innerHTML = '<i class="fa-solid fa-check-circle"></i> 確認儲存';
+
+        // Add edit-mode class to all spec tables
+        document.querySelectorAll('.spec-table').forEach(table => {
+            table.classList.add('edit-mode');
+        });
+
+        const partNo = state.selectedItem ? state.selectedItem["產品型號"] : null;
+        const saved = partNo ? (state.inspectionData[partNo] || {}) : {};
+
+        // Convert all [data-input-key] cells to input fields
+        document.querySelectorAll('[data-input-key]').forEach(td => {
+            const key = td.getAttribute('data-input-key');
+            const currentVal = saved[key] || '';
+            td.classList.add('editable-cell');
+            td.innerHTML = `<input type="text" class="inspect-input" data-key="${key}" value="${currentVal}" placeholder="輸入...">`;
+        });
+
+        // Auto-focus the first input
+        const firstInput = document.querySelector('.inspect-input');
+        if (firstInput) firstInput.focus();
+
+        // Add Tab navigation between inputs (Enter key moves to next)
+        document.querySelectorAll('.inspect-input').forEach((input, idx, all) => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const next = all[idx + 1];
+                    if (next) next.focus();
+                    else exitEditMode(); // Last field: auto-save
+                }
+            });
+        });
+    }
+
+    function exitEditMode() {
+        state.isEditMode = false;
+        btnInputInspection.classList.remove('editing');
+        btnInputInspection.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> 輸入查檢數據';
+
+        // Remove edit-mode class
+        document.querySelectorAll('.spec-table').forEach(table => {
+            table.classList.remove('edit-mode');
+        });
+
+        // Collect all input values and save to state
+        const partNo = state.selectedItem ? state.selectedItem["產品型號"] : null;
+        if (!partNo) return;
+
+        if (!state.inspectionData[partNo]) {
+            state.inspectionData[partNo] = {};
+        }
+
+        document.querySelectorAll('.inspect-input').forEach(input => {
+            const key = input.getAttribute('data-key');
+            const val = input.value.trim();
+            if (val) {
+                state.inspectionData[partNo][key] = val;
+            } else {
+                delete state.inspectionData[partNo][key];
+            }
+        });
+
+        // Convert inputs back to display text
+        document.querySelectorAll('[data-input-key]').forEach(td => {
+            const key = td.getAttribute('data-input-key');
+            const val = state.inspectionData[partNo][key];
+            td.classList.remove('editable-cell');
+            if (val) {
+                td.innerHTML = `<span class="inspect-value">${val}</span>`;
+            } else {
+                td.textContent = '';
+            }
+        });
     }
 
     // --- FILTER & SEARCH ---
@@ -590,7 +708,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     row.getCell(2).value = partData[target_k] || "N/A";
                     row.getCell(3).value = partData[low_k] || "N/A";
                     row.getCell(4).value = partData[high_k] || "N/A";
-                    row.getCell(5).value = ""; // 實際值留空
+                    // Write inspection data if available
+                    const actualKeyMap = {
+                        '實際融膠溫度_實際值': 'melt_actual',
+                        '填充時間_實際值': 'fill_actual',
+                        '充填階段的產品平均重量_實際值': 'fillw_actual',
+                        '保壓壓力_實際值': 'holdp_actual',
+                        '保壓時間_實際值': 'holdt_actual',
+                        '保壓完的產品平均重量_實際值': 'packw_actual',
+                        '冷卻時間_實際值': 'cool_actual',
+                        '模具溫度設定-母模_實際值': 'tempa_actual',
+                        '模具溫度設定-公模_實際值': 'tempb_actual',
+                        '模具溫度設定-滑塊_實際值': 'temps_actual',
+                    };
+                    const inspKey = actualKeyMap[actual_k];
+                    const inspData = state.inspectionData[partNo] || {};
+                    row.getCell(5).value = (inspKey && inspData[inspKey]) ? inspData[inspKey] : "";
                     
                     for (let c = 2; c <= 5; c++) {
                         row.getCell(c).font = value_font;
@@ -633,7 +766,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     row.getCell(2).font = value_font;
                     row.getCell(2).alignment = center_align;
                     
-                    row.getCell(5).value = ""; // check box
+                    // Write inspection check data if available
+                    const refKeyMap = {
+                        '充填階段的模重_目標值': 'ref_fill_shot_check',
+                        '保壓完的模重_目標值': 'ref_packed_shot_check',
+                        '鎖模力_目標值': 'ref_clamp_check',
+                        '週期時間_目標值': 'ref_cycle_check',
+                    };
+                    const refInspKey = refKeyMap[key];
+                    const refInspData = state.inspectionData[partNo] || {};
+                    row.getCell(5).value = (refInspKey && refInspData[refInspKey]) ? refInspData[refInspKey] : "";
                     row.getCell(5).font = value_font;
                     row.getCell(5).alignment = center_align;
                     
@@ -662,7 +804,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 check_row1.getCell(1).alignment = left_align;
                 check_row1.getCell(1).border = thin_border;
 
-                check_row1.getCell(2).value = ""; // blank
+                const signData = state.inspectionData[partNo] || {};
+                check_row1.getCell(2).value = signData['sign_press_no'] || "";
                 check_row1.getCell(2).border = thin_border;
 
                 check_row1.getCell(3).value = "查檢日期 Inspection Date";
@@ -672,7 +815,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 check_row1.getCell(3).border = thin_border;
 
                 worksheet.mergeCells(curr_row, 4, curr_row, 5);
-                check_row1.getCell(4).value = ""; // blank
+                check_row1.getCell(4).value = signData['sign_date'] || "";
                 check_row1.getCell(4).border = thin_border;
                 check_row1.getCell(5).border = thin_border;
                 curr_row++;
@@ -685,7 +828,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 check_row2.getCell(1).alignment = left_align;
                 check_row2.getCell(1).border = thin_border;
 
-                check_row2.getCell(2).value = ""; // blank
+                check_row2.getCell(2).value = signData['sign_time'] || "";
                 check_row2.getCell(2).border = thin_border;
 
                 check_row2.getCell(3).value = "查檢員簽名 Inspector Signature";
@@ -695,7 +838,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 check_row2.getCell(3).border = thin_border;
 
                 worksheet.mergeCells(curr_row, 4, curr_row, 5);
-                check_row2.getCell(4).value = ""; // blank
+                check_row2.getCell(4).value = signData['sign_inspector'] || "";
                 check_row2.getCell(4).border = thin_border;
                 check_row2.getCell(5).border = thin_border;
                 curr_row++;
@@ -760,7 +903,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/api/export_part", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ part_no: partNo })
+                body: JSON.stringify({ part_no: partNo, inspection_data: state.inspectionData[partNo] || {} })
             });
             if (response.ok) {
                 const resData = await response.json();

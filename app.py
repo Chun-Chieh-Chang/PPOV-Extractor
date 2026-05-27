@@ -127,6 +127,7 @@ def export_master():
 def export_part_excel():
     """Generates a highly premium structured Excel sheet for a single part, prompting the user for the save path."""
     part_no = request.json.get("part_no")
+    inspection_data = request.json.get("inspection_data", {})
     if not part_no:
         return jsonify({"success": False, "message": "請指定品號"})
         
@@ -269,8 +270,22 @@ def export_part_excel():
             cell.font = value_font
             cell.alignment = center_align
             
-        # 實際值 (Column 5) 全部留空
-        cell_actual = ws.cell(row=curr_row, column=5, value="")
+        # 實際值 (Column 5) - fill from inspection_data if available
+        actual_key_map = {
+            "實際融膠溫度_實際值": "melt_actual",
+            "填充時間_實際值": "fill_actual",
+            "充填階段的產品平均重量_實際值": "fillw_actual",
+            "保壓壓力_實際值": "holdp_actual",
+            "保壓時間_實際值": "holdt_actual",
+            "保壓完的產品平均重量_實際值": "packw_actual",
+            "冷卻時間_實際值": "cool_actual",
+            "模具溫度設定-母模_實際值": "tempa_actual",
+            "模具溫度設定-公模_實際值": "tempb_actual",
+            "模具溫度設定-滑塊_實際值": "temps_actual",
+        }
+        insp_key = actual_key_map.get(actual_k, "")
+        insp_val = inspection_data.get(insp_key, "") if insp_key else ""
+        cell_actual = ws.cell(row=curr_row, column=5, value=insp_val)
         cell_actual.font = value_font
         cell_actual.alignment = center_align
             
@@ -306,8 +321,16 @@ def export_part_excel():
         ws.cell(row=curr_row, column=2, value=part_data.get(key, "N/A")).font = value_font
         ws.cell(row=curr_row, column=2).alignment = center_align
         
-        # Column 5: Blank Check Field (for user inspection)
-        ws.cell(row=curr_row, column=5, value="").font = value_font
+        # Column 5: Check Field - fill from inspection_data if available
+        ref_key_map = {
+            "充填階段的模重_目標值": "ref_fill_shot_check",
+            "保壓完的模重_目標值": "ref_packed_shot_check",
+            "鎖模力_目標值": "ref_clamp_check",
+            "週期時間_目標值": "ref_cycle_check",
+        }
+        ref_insp_key = ref_key_map.get(key, "")
+        ref_insp_val = inspection_data.get(ref_insp_key, "") if ref_insp_key else ""
+        ws.cell(row=curr_row, column=5, value=ref_insp_val).font = value_font
         ws.cell(row=curr_row, column=5).alignment = center_align
         
         for c in range(1, 6):
@@ -328,7 +351,7 @@ def export_part_excel():
     ws.cell(row=curr_row, column=1).fill = ACCENT_FILL
     ws.cell(row=curr_row, column=1).border = thin_border
 
-    ws.cell(row=curr_row, column=2, value="").font = value_font
+    ws.cell(row=curr_row, column=2, value=inspection_data.get("sign_press_no", "")).font = value_font
     ws.cell(row=curr_row, column=2).border = thin_border
 
     ws.cell(row=curr_row, column=3, value="查檢日期 Inspection Date").font = label_font
@@ -337,7 +360,7 @@ def export_part_excel():
     ws.cell(row=curr_row, column=3).border = thin_border
 
     ws.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=5)
-    ws.cell(row=curr_row, column=4, value="").font = value_font
+    ws.cell(row=curr_row, column=4, value=inspection_data.get("sign_date", "")).font = value_font
     ws.cell(row=curr_row, column=4).border = thin_border
     ws.cell(row=curr_row, column=5).border = thin_border
     curr_row += 1
@@ -348,7 +371,7 @@ def export_part_excel():
     ws.cell(row=curr_row, column=1).fill = ACCENT_FILL
     ws.cell(row=curr_row, column=1).border = thin_border
 
-    ws.cell(row=curr_row, column=2, value="").font = value_font
+    ws.cell(row=curr_row, column=2, value=inspection_data.get("sign_time", "")).font = value_font
     ws.cell(row=curr_row, column=2).border = thin_border
 
     ws.cell(row=curr_row, column=3, value="查檢員簽名 Inspector Signature").font = label_font
@@ -357,7 +380,7 @@ def export_part_excel():
     ws.cell(row=curr_row, column=3).border = thin_border
 
     ws.merge_cells(start_row=curr_row, start_column=4, end_row=curr_row, end_column=5)
-    ws.cell(row=curr_row, column=4, value="").font = value_font
+    ws.cell(row=curr_row, column=4, value=inspection_data.get("sign_inspector", "")).font = value_font
     ws.cell(row=curr_row, column=4).border = thin_border
     ws.cell(row=curr_row, column=5).border = thin_border
     curr_row += 1
