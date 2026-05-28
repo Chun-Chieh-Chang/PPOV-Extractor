@@ -158,9 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
         specDryingCond: "烘料條件",
         
         // Tabular metrics
-        td_melt_t: "實際融膠溫度_目標值", td_melt_l: "實際融膠溫度_下限值", td_melt_h: "實際融膠溫度_上限值", td_melt_a: "實際融膠溫度_實際值",
         td_fill_t: "填充時間_目標值", td_fill_l: "填充時間_下限值", td_fill_h: "填充時間_上限值", td_fill_a: "填充時間_實際值",
-        td_fillw_t: "充填階段的產品平均重量_目標值", td_fillw_l: "充填階段的產品平均重量_下限值", td_fillw_h: "充填階段的產品平均重量_上限值", td_fillw_a: "充填階段的產品平均重量_實際值",
         td_holdp_t: "保壓壓力_目標值", td_holdp_l: "保壓壓力_下限值", td_holdp_h: "保壓壓力_上限值", td_holdp_a: "保壓壓力_實際值",
         td_holdt_t: "保壓時間_目標值", td_holdt_l: "保壓時間_下限值", td_holdt_h: "保壓時間_上限值", td_holdt_a: "保壓時間_實際值",
         td_packw_t: "保壓完的產品平均重量_目標值", td_packw_l: "保壓完的產品平均重量_下限值", td_packw_h: "保壓完的產品平均重量_上限值", td_packw_a: "保壓完的產品平均重量_實際值",
@@ -170,7 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
         td_temps_t: "模具溫度設定-滑塊_目標值", td_temps_l: "模具溫度設定-滑塊_下限值", td_temps_h: "模具溫度設定-滑塊_上限值", td_temps_a: "模具溫度設定-滑塊_實際值",
         
         // Ref metrics
-        refFillShotWeight: "充填階段的模重_目標值",
         refPackedShotWeight: "保壓完的模重_目標值",
         refClampTonnage: "鎖模力_目標值",
         refCycleTime: "週期時間_目標值"
@@ -875,9 +872,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 curr_row++;
                 
                 const proc_rows = [
-                    ["實際融膠溫度 Melt Temp (℃)", "實際融膠溫度_目標值", "實際融膠溫度_下限值", "實際融膠溫度_上限值", "實際融膠溫度_實際值"],
                     ["填充時間 Fill Time (s)", "填充時間_目標值", "填充時間_下限值", "填充時間_上限值", "填充時間_實際值"],
-                    ["產品充填重量 Average Fill Weight (g)", "充填階段的產品平均重量_目標值", "充填階段的產品平均重量_下限值", "充填階段的產品平均重量_上限值", "充填階段的產品平均重量_實際值"],
                     ["保壓壓力 Hold Pressure (bar)", "保壓壓力_目標值", "保壓壓力_下限值", "保壓壓力_上限值", "保壓壓力_實際值"],
                     ["保壓時間 Hold Time (s)", "保壓時間_目標值", "保壓時間_下限值", "保壓時間_上限值", "保壓時間_實際值"],
                     ["保壓完產品重量 Packed Weight (g)", "保壓完的產品平均重量_目標值", "保壓完的產品平均重量_下限值", "保壓完的產品平均重量_上限值", "保壓完的產品平均重量_實際值"],
@@ -899,9 +894,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     row.getCell(4).value = partData[high_k] || "N/A";
                     // Write inspection data if available
                     const actualKeyMap = {
-                        '實際融膠溫度_實際值': 'melt_actual',
                         '填充時間_實際值': 'fill_actual',
-                        '充填階段的產品平均重量_實際值': 'fillw_actual',
                         '保壓壓力_實際值': 'holdp_actual',
                         '保壓時間_實際值': 'holdt_actual',
                         '保壓完的產品平均重量_實際值': 'packw_actual',
@@ -937,7 +930,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 curr_row++;
                 
                 const ref_fields = [
-                    ["充填階段模重 Fill Only Shot Weight (g)", "充填階段的模重_目標值"],
                     ["保壓完模重 Packed Out Shot Weight (g)", "保壓完的模重_目標值"],
                     ["鎖模力設定 Clamp Tonnage (ton)", "鎖模力_目標值"],
                     ["生產週期時間 Mold Cycle Time (s)", "週期時間_目標值"]
@@ -957,7 +949,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     // Write inspection check data if available
                     const refKeyMap = {
-                        '充填階段的模重_目標值': 'ref_fill_shot_check',
                         '保壓完的模重_目標值': 'ref_packed_shot_check',
                         '鎖模力_目標值': 'ref_clamp_check',
                         '週期時間_目標值': 'ref_cycle_check',
