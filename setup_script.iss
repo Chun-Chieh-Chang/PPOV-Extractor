@@ -1,10 +1,10 @@
-Ôªø; PPOV Extractor Inno Setup Script
+; PPOV Extractor Inno Setup Script
 ; Version: 1.8.2
 
 [Setup]
 AppId={{D8F9A4B0-C2E3-4B5D-8E1F-A8B9C0D1E2F3}
 AppName=PPOV Extractor
-AppVersion=1.8.2
+AppVersion=1.9.3
 AppPublisher=Chun-Chieh Chang
 VersionInfoCompany=Chun-Chieh Chang
 VersionInfoDescription=PPOV Extractor Professional Installer
@@ -14,7 +14,7 @@ DefaultDirName={autopf}\PPOV Extractor
 DefaultGroupName=PPOV Extractor
 AllowNoIcons=yes
 LicenseFile=BUILD_README.md
-OutputBaseFilename=PPOV-Extractor-Setup-v1.8.2
+OutputBaseFilename=PPOV-Extractor-Setup-v1.9.3
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -36,9 +36,10 @@ Source: "ppov_database.json"; DestDir: "{userappdata}\PPOV-Extractor"; Flags: on
 
 [Icons]
 Name: "{group}\PPOV Extractor"; Filename: "{app}\PPOV-Extractor.exe"
-Name: "{group}\Á≥ªÁµ±ÁÆ°ÁêÜÂì°ÊâãÂÜä"; Filename: "{app}\System_Admin_Manual.html"
+Name: "{group}\®t≤Œ∫ﬁ≤z≠˚§‚•U"; Filename: "{app}\System_Admin_Manual.html"
 Name: "{group}\{cm:UninstallProgram,PPOV Extractor}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\PPOV Extractor"; Filename: "{app}\PPOV-Extractor.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\PPOV-Extractor.exe"; Description: "{cm:LaunchProgram,PPOV Extractor}"; Flags: nowait postinstall skipifsilent
+

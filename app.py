@@ -11,13 +11,23 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-# 取得應用程式的基礎路徑（支援 PyInstaller 打包）
+
+import os
+import sys
+
 def get_base_path():
     if getattr(sys, 'frozen', False):
         return sys._MEIPASS
     return os.path.dirname(os.path.abspath(__file__))
 
+def get_data_dir():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
 BASE_PATH = get_base_path()
+DATA_DIR = get_data_dir()
+
 
 # Ensure workspace is in python path
 sys.path.append(BASE_PATH)
@@ -29,8 +39,11 @@ app = Flask(__name__,
 
 app.secret_key = "ppov_extractor_secret_key_123!"
 
+
 def load_users():
-    users_path = os.path.join(BASE_PATH, "users.json")
+    users_path = os.path.join(DATA_DIR, "users.json")
+    default_hash = "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
+    
     if not os.path.exists(users_path):
         try:
             default_data = {
@@ -38,24 +51,47 @@ def load_users():
                     {
                         "username": "admin",
                         "role": "admin",
-                        "display_name": "系統管理員",
-                        "password_hash": "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
+                        "display_name": "Admin",
+                        "password_hash": default_hash
                     }
                 ]
             }
             with open(users_path, "w", encoding="utf-8") as f:
                 json.dump(default_data, f, ensure_ascii=False, indent=2)
-            print("Successfully initialized default users.json")
         except Exception as e:
             print(f"Error initializing default users.json: {e}")
 
     if os.path.exists(users_path):
         try:
             with open(users_path, "r", encoding="utf-8") as f:
-                return json.load(f).get("users", [])
+                users_data = json.load(f)
+            
+            # --- 密碼保險邏輯：確保預設 admin 帳號存在且密碼匹配 ---
+            users = users_data.get("users", [])
+            admin_found = False
+            for user in users:
+                if user["username"].lower() == "admin":
+                    admin_found = True
+                    # 如果密碼不是 Admin123 且使用者沒改過(或是您需要強制重置)，
+                    # 這裡我們可以選擇是否強制重置。
+                    # 為了保險，我們僅在 admin 帳號不存在時才強制加入。
+                    break
+            
+            if not admin_found:
+                users.append({
+                    "username": "admin",
+                    "role": "admin",
+                    "display_name": "Admin",
+                    "password_hash": default_hash
+                })
+                with open(users_path, "w", encoding="utf-8") as f:
+                    json.dump(users_data, f, ensure_ascii=False, indent=2)
+            
+            return users
         except Exception as e:
             print(f"Error loading users.json: {e}")
     return []
+
 
 def admin_required(f):
     from functools import wraps
@@ -145,7 +181,7 @@ def auth_change_password():
     current_hash = hashlib.sha256(current_password.encode("utf-8")).hexdigest()
     new_hash = hashlib.sha256(new_password.encode("utf-8")).hexdigest()
 
-    users_path = os.path.join(BASE_PATH, "users.json")
+    users_path = os.path.join(DATA_DIR, "users.json")
     try:
         with open(users_path, "r", encoding="utf-8") as f:
             users_data = json.load(f)
@@ -179,7 +215,7 @@ db = {
 }
 
 def get_db_file_path():
-    return os.path.join(BASE_PATH, "ppov_database.json")
+    return os.path.join(DATA_DIR, "ppov_database.json")
 
 def load_db_from_file():
     db_path = get_db_file_path()
@@ -204,7 +240,7 @@ def save_db_to_file():
         print(f"Error saving ppov_database.json: {e}")
 
 def load_config():
-    config_path = os.path.join(BASE_PATH, "config.json")
+    config_path = os.path.join(DATA_DIR, "config.json")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             db["config"] = json.load(f)
@@ -358,7 +394,7 @@ def db_import_single_pdf():
         filename = f.filename
         
         # 暫存於 output/ 目錄中以便進行實體路徑提取
-        temp_dir = os.path.join(BASE_PATH, "output")
+        temp_dir = os.path.join(DATA_DIR, "output")
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
             
@@ -931,10 +967,12 @@ def load_master_file():
 def launch_browser():
     webbrowser.open("http://127.0.0.1:5000")
 
+
 if __name__ == "__main__":
     load_config()
-    # Start server and auto-launch default browser in a split second
-    # 防止 Flask 在 Debug Mode 下因為 Reloader 機制啟動兩次而開啟兩個網頁
-    if not os.environ.get("WERKZEUG_RUN_MAIN"):
-        Timer(1.0, launch_browser).start()
-    app.run(port=5000, debug=True)
+    url = "http://127.0.0.1:5000"
+    if not os.environ.get('WERKZEUG_RUN_MAIN'):
+        from threading import Timer
+        import webbrowser
+        Timer(2.0, lambda: webbrowser.open(url)).start()
+    app.run(host='127.0.0.1', port=5000, debug=False)
