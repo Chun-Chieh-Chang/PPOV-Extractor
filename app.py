@@ -14,6 +14,20 @@ from openpyxl.utils import get_column_letter
 # 取得應用程式的基礎路徑（支援 PyInstaller 打包）
 
 
+
+import socket
+
+def find_free_port(start_port=5000):
+    port = start_port
+    while port < 6000:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('127.0.0.1', port))
+                return port
+            except:
+                port += 1
+    return 0
+
 def get_resource_path():
     if getattr(sys, 'frozen', False):
         return sys._MEIPASS
@@ -32,6 +46,7 @@ def get_data_dir():
 
 RESOURCE_PATH = get_resource_path()
 DATA_DIR = get_data_dir()
+
 
 
 
