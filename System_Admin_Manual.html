@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPOV Extractor 系統管理員手冊</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px; background-color: #f4f7f9; }
+        header { border-bottom: 3px solid #1A3A5F; padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { color: #1A3A5F; margin: 0; }
+        h2 { color: #3A7CA8; border-left: 5px solid #3A7CA8; padding-left: 15px; margin-top: 40px; }
+        h3 { color: #50718C; }
+        code { background-color: #eef2f6; padding: 2px 5px; border-radius: 4px; font-family: 'Consolas', monospace; color: #d63384; }
+        pre { background-color: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .note { background-color: #fff9db; border-left: 5px solid #fab005; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .important { background-color: #fff5f5; border-left: 5px solid #ff6b6b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #1A3A5F; color: white; }
+        footer { margin-top: 50px; text-align: center; font-size: 0.9em; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>PPOV Extractor 系統管理員手冊</h1>
+        <p>版本：v1.8.2 | 建立日期：2026-05-28</p>
+    </header>
+
+    <section id="introduction">
+        <h2>1. 系統概述</h2>
+        <p>PPOV Extractor 是一款專為模具參數提取設計的自動化工具。它能從 PPOV PDF 報告中識別關鍵製程參數（如壓力、溫度、時間等），並將其結構化匯出為 Excel 或 JSON 格式。</p>
+    </section>
+
+    <section id="deployment">
+        <h2>2. 部署與安裝</h2>
+        <h3>2.1 單一執行檔部署</h3>
+        <p>將 <code>dist/PPOV-Extractor.exe</code> 複製到目標伺服器或工作站的任何目錄中。程式執行時會自動在同目錄下生成必要的設定檔。</p>
+        
+        <h3>2.2 資料持久化架構</h3>
+        <p>系統採用「資源與資料分離」設計：</p>
+        <ul>
+            <li><strong>資源 (唯讀)：</strong> 包含在 .exe 內的靜態 UI 與模板，由 PyInstaller 管理。</li>
+            <li><strong>資料 (持久化)：</strong> 儲存於 <code>.exe</code> 所在的目錄。</li>
+        </ul>
+        <div class="note">
+            管理員修改的密碼與提取的資料庫檔案將儲存在 <code>.exe</code> 旁邊，請勿隨意移動 <code>users.json</code>。
+        </div>
+    </section>
+
+    <section id="security">
+        <h2>3. 帳號與安全管理</h2>
+        <h3>3.1 預設帳號</h3>
+        <table>
+            <tr><th>用戶名</th><th>初始密碼</th><th>權限等級</th></tr>
+            <tr><td>admin</td><td>ADMIN (大寫)</td><td>系統管理員</td></tr>
+        </table>
+        
+        <h3>3.2 密碼修改流程</h3>
+        <p>1. 登入系統後點擊「管理員中心」。<br>
+           2. 選擇「修改密碼」。<br>
+           3. 變更後將即時加密儲存於 <code>users.json</code>。
+        </p>
+
+        <div class="important">
+            <strong>隱私風險提示：</strong> <code>users.json</code> 儲存了密碼的 SHA-256 雜湊值。請確保該檔案不被非授權人員存取。
+        </div>
+    </section>
+
+    <section id="configuration">
+        <h2>4. 欄位設定 (config.json)</h2>
+        <p>如需調整 PDF 提取邏輯，請編輯 <code>config.json</code>。該檔案支援以下配置：</p>
+        <ul>
+            <li><code>fields_to_extract</code>: 定義欄位名稱與正則表達式關鍵字。</li>
+            <li><code>public_export_folder</code>: 指定匯出 Excel 的預設伺服器路徑。</li>
+        </ul>
+    </section>
+
+    <section id="maintenance">
+        <h2>5. 維護與故障排除</h2>
+        <h3>5.1 檔案清單</h3>
+        <ul>
+            <li><code>PPOV-Extractor.exe</code>: 主程式</li>
+            <li><code>users.json</code>: 帳戶資料</li>
+            <li><code>ppov_database.json</code>: 本地 Master Table 紀錄</li>
+            <li><code>config.json</code>: 欄位識別設定</li>
+        </ul>
+
+        <h3>5.2 Windows 封鎖問題</h3>
+        <p>若遇到 SmartScreen 警告，請在檔案上點擊 <strong>右鍵 -> 內容 -> 勾選「解除封鎖」</strong>。</p>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 Chun-Chieh Chang | PPOV Extractor Project</p>
+    </footer>
+</body>
+</html>

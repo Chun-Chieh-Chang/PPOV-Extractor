@@ -74,3 +74,51 @@ QC 反應 `實際融膠溫度`、`產品充填重量`、`充填階段模重` 這
 * **問題：Excel 排版如果使用固定座標或硬編碼行號，刪除行後會導致欄位錯位或留下空白列。**
   * **解決 (CAPA)**：由於 PPOV Extractor 的 Excel 導出引擎（前端 `ExcelJS` 與後端 `openpyxl`）均採用了動態行索引變數 `curr_row`。當我們在 `proc_rows` 與 `ref_fields` 陣列中移除這三行後，導出引擎將會動態緊湊地生成表格，使單一品號規格 Excel 與 UI 渲染保持完全一致且完美的莫蘭迪冰藍視覺排版，不會產生任何空白列與越界，完全杜絕人工調整排版的麻煩。
 
+
+### 🟢 任務完成：分支合併與重新打包 (v1.8.2 - 2026-05-28)
+
+#### 任務描述
+1. 將 eature/db-dashboard 分支合併至 main。
+2. 執行全量測試驗證解析準確度。
+3. 重新打包執行檔並解決 Windows SmartScreen 封鎖問題。
+
+#### 根本原因分析 (RCA) & 矯正預防措施 (CAPA)
+
+* **問題 1：執行檔被 Windows SmartScreen 封鎖**
+    * **RCA**: 原始打包流程未包含版本元數據（Metadata），且缺乏數位簽章，導致 Windows 將其歸類為「來源不明的惡意軟體」。
+    * **CAPA**: 
+        1. 建立 ersion_info.txt 描述檔，定義公司名稱、檔案描述、版本號（1.8.1）。
+        2. 修改 uild.spec 將 ersion 參數指向該描述檔。
+        3. 重新打包後，檔案屬性中已顯示正確的開發者資訊，降低誤報率。
+
+* **問題 2：分支合併後的環境一致性**
+    * **RCA**: eature/db-dashboard 引入了新的 Master Table 邏輯與 ExcelJS 匯出機制，需確保本地環境的 erify_extraction.py 能正確對應。
+    * **CAPA**: 
+        1. 執行 python -m py_compile 進行語法掃描。
+        2. 建立臨時 TestData 目錄並從 PPOV/ 複製樣本進行實測。
+        3. 驗證 10 項關鍵欄位提取（含重量、溫度、壓力等）皆 100% 匹配。
+
+#### 驗證結果
+* **Git Status**: 合併完成並已推送至 origin/main (commit: 966486e)。
+* **Test Outcome**: ALL TESTS PASSED。
+* **Distribution**: dist/PPOV-Extractor.exe 打包完成，包含版本資訊。
+
+### 🔵 系統發布優化：安裝程式與管理手冊 (v1.8.3 - 2026-05-28)
+
+#### 任務描述
+1. 建立系統管理員手冊 (HTML 格式)。
+2. 建立 Inno Setup 安裝腳本以取代單一 .exe。
+
+#### 根本原因分析 (RCA) & 矯正預防措施 (CAPA)
+
+* **問題 1：獨立 .exe 導致資源管理與捷徑不便**
+    * **RCA**: 單一執行檔無法在系統目錄中妥善安裝，且難以自動建立桌面快捷鍵，導致使用者體驗不佳且資料檔案散落。
+    * **CAPA**: 
+        1. 撰寫 setup_script.iss 用於生成 Windows 標準安裝包。
+        2. 配置 uninsneveruninstall 標籤，確保軟體升級時不會刪除 users.json 與 ppov_database.json（保留密碼與數據）。
+        3. 將 System_Admin_Manual.html 整合進安裝流程，並於開始功能表建立連結。
+
+#### 驗證結果
+* **Documentation**: System_Admin_Manual.html 已生成。
+* **Packaging**: setup_script.iss 已備妥。
+* **GitHub**: 相關文件已上傳至倉庫。
