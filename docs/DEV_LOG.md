@@ -22,14 +22,9 @@
    - 登入與登出流程優化，在登出時無縫復原為 `inspector` 免密碼角色。
 5. **index.html & templates/index.html**：同步升級 timeline changelog 與引用版本號至 `v1.8.0`（緩存重新導向）。
 6. **Excel 雙引擎欄寬微調 (Column Widths)**：
-   - 調整後端（openpyxl in `app.py`）與前端（ExcelJS in `static/app.js`）雙輸出引擎之預設欄寬參數（A欄 38.5、B欄 18.5、C欄 30.0、D欄 11.3、E欄 11.3），完美貼合數據內容長度，防止文字折行或溢出。 - 為所有高級管理、CRUD 刪修端點以及 `/api/export_master` 強制掛載 `@admin_required` 裝飾器。
-   - 移除 `/api/load_master_file` 之限制裝飾器，使品檢員能無密碼匯入總表。
-   - 在 `/api/export_master` 中引入公用備份邏輯，將生成的 Excel/JSON 寫入伺服器端指定路徑。
-4. **static/app.js (前端控制遮罩)**：
-   - 初始化 state 中 user 角色為 `inspector`。
-   - 重構 `applyRoleMask`：品檢員僅可見 `Load Master File`、`Input Inspection` 與 `Export Part Spec`；管理員登入後可見全部管理元件與 CRUD 表格編輯列。
-   - 登入與登出流程優化，在登出時無縫復原為 `inspector` 免密碼角色。
-5. **index.html & templates/index.html**：同步升級 timeline changelog 與引用版本號至 `v1.8.0`（緩存重新導向）。
+   - 調整後端（openpyxl in `app.py`）與前端（ExcelJS in `static/app.js`）雙輸出引擎之預設欄寬參數（A欄 38.5、B欄 18.5、C欄 30.0、D欄 11.3、E欄 11.3），完美貼合數據內容長度，防止文字折行或溢出。
+7. **MAINTENANCE.md (維護指南)**：
+   - 將新微調之雙引擎預設欄寬、置中排版及自訂列印邊界（上/下 0.8cm，左/右 1.3cm）等規格指標正式寫入指南，定立為持久化專案驗收的「排版成功條件」。
 
 ### Verification Notes
 
