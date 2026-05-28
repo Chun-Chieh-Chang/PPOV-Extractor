@@ -1,4 +1,4 @@
-; PPOV Extractor Inno Setup Script
+Ôªø; PPOV Extractor Inno Setup Script
 ; Version: 1.8.2
 
 [Setup]
@@ -6,17 +6,18 @@ AppId={{D8F9A4B0-C2E3-4B5D-8E1F-A8B9C0D1E2F3}
 AppName=PPOV Extractor
 AppVersion=1.8.2
 AppPublisher=Chun-Chieh Chang
+VersionInfoCompany=Chun-Chieh Chang
+VersionInfoDescription=PPOV Extractor Professional Installer
+VersionInfoVersion=1.8.2.0
+VersionInfoCopyright=Copyright (C) 2026 Chun-Chieh Chang
 DefaultDirName={autopf}\PPOV Extractor
 DefaultGroupName=PPOV Extractor
 AllowNoIcons=yes
 LicenseFile=BUILD_README.md
-; øÈ•X¶w∏À•]¶W∫Ÿ
 OutputBaseFilename=PPOV-Extractor-Setup-v1.8.2
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-; ≥]∏m¶w∏Àπœ•‹ (¶p™G¶≥ .ico ¿…Æ◊)
-; SetupIconFile=static\favicon.ico 
 
 [Languages]
 Name: "chinesetraditional"; MessagesFile: "compiler:Default.isl"
@@ -25,21 +26,19 @@ Name: "chinesetraditional"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; •Dµ{¶°ªP∏Í∑Ω
 Source: "dist\PPOV-Extractor.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "config.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "System_Admin_Manual.html"; DestDir: "{app}"; Flags: ignoreversion
 
-; ∏ÍÆ∆¿…Æ◊ (¶p™G§£¶s¶b´h´ÿ•ﬂ°A§…Ø≈Æ…§£¬–ª\•H´OØd®œ•Œ™Ã±KΩXªPº∆æ⁄)
-Source: "users.json"; DestDir: "{app}"; Flags: onlyifdoesntexist uninsneveruninstall
-Source: "ppov_database.json"; DestDir: "{app}"; Flags: onlyifdoesntexist uninsneveruninstall
+; Persistent data files in user's APPDATA
+Source: "users.json"; DestDir: "{userappdata}\PPOV-Extractor"; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "ppov_database.json"; DestDir: "{userappdata}\PPOV-Extractor"; Flags: onlyifdoesntexist uninsneveruninstall
 
 [Icons]
 Name: "{group}\PPOV Extractor"; Filename: "{app}\PPOV-Extractor.exe"
-Name: "{group}\®t≤Œ∫ﬁ≤z≠˚§‚•U"; Filename: "{app}\System_Admin_Manual.html"
+Name: "{group}\Á≥ªÁµ±ÁÆ°ÁêÜÂì°ÊâãÂÜä"; Filename: "{app}\System_Admin_Manual.html"
 Name: "{group}\{cm:UninstallProgram,PPOV Extractor}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\PPOV Extractor"; Filename: "{app}\PPOV-Extractor.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\PPOV-Extractor.exe"; Description: "{cm:LaunchProgram,PPOV Extractor}"; Flags: nowait postinstall skipifsilent
-
