@@ -40,57 +40,36 @@ app = Flask(__name__,
 app.secret_key = "ppov_extractor_secret_key_123!"
 
 
+
 def load_users():
-    users_path = os.path.join(DATA_DIR, "users.json")
-    default_hash = "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
+    default_hash = "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2" # Admin123
+    admin_user = {
+        "username": "admin",
+        "role": "admin",
+        "display_name": "Admin",
+        "password_hash": default_hash
+    }
     
-    if not os.path.exists(users_path):
-        try:
-            default_data = {
-                "users": [
-                    {
-                        "username": "admin",
-                        "role": "admin",
-                        "display_name": "Admin",
-                        "password_hash": default_hash
-                    }
-                ]
-            }
-            with open(users_path, "w", encoding="utf-8") as f:
-                json.dump(default_data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"Error initializing default users.json: {e}")
+    users_path = os.path.join(DATA_DIR, "users.json")
+    users = [admin_user] # 預設包含保險帳號
 
     if os.path.exists(users_path):
         try:
             with open(users_path, "r", encoding="utf-8") as f:
-                users_data = json.load(f)
-            
-            # --- 密碼保險邏輯：確保預設 admin 帳號存在且密碼匹配 ---
-            users = users_data.get("users", [])
-            admin_found = False
-            for user in users:
-                if user["username"].lower() == "admin":
-                    admin_found = True
-                    # 如果密碼不是 Admin123 且使用者沒改過(或是您需要強制重置)，
-                    # 這裡我們可以選擇是否強制重置。
-                    # 為了保險，我們僅在 admin 帳號不存在時才強制加入。
-                    break
-            
-            if not admin_found:
-                users.append({
-                    "username": "admin",
-                    "role": "admin",
-                    "display_name": "Admin",
-                    "password_hash": default_hash
-                })
-                with open(users_path, "w", encoding="utf-8") as f:
-                    json.dump(users_data, f, ensure_ascii=False, indent=2)
-            
-            return users
+                data = json.load(f)
+                file_users = data.get("users", [])
+                if file_users:
+                    # 如果檔案裡有資料，以檔案為主，但確保 admin 帳號在裡面
+                    has_admin = any(u["username"].lower() == "admin" for u in file_users)
+                    if not has_admin:
+                        file_users.append(admin_user)
+                    return file_users
         except Exception as e:
-            print(f"Error loading users.json: {e}")
-    return []
+            print(f"Users JSON read error: {e}")
+            # 如果讀取失敗，就用預設的 [admin_user]
+    
+    return users
+
 
 
 def admin_required(f):
@@ -102,14 +81,45 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
 @app.route("/api/auth/login", methods=["POST"])
 def auth_login():
     payload = request.json or {}
     username = payload.get("username", "").strip().lower()
     password = payload.get("password", "")
-    
+
     if not username or not password:
-        return jsonify({"success": False, "message": "請輸入帳號與密碼"})
+        return jsonify({"success": False, "message": "Missing credentials"})
+
+    password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    users = load_users()
+    
+    if not users:
+        return jsonify({"success": False, "message": "Login Error: User system failure [ERR_NO_DB]"})
+
+    user = next((u for u in users if u["username"].lower() == username), None)
+
+    if not user:
+        return jsonify({"success": False, "message": f"Login Error: User '{username}' not found"})
+
+    if user["password_hash"] != password_hash:
+        # Debug 資訊 (發布前可移除，但現在是 Check 階段必備)
+        return jsonify({"success": False, "message": f"Login Error: Password incorrect for '{username}'"})
+
+    session["username"] = user["username"]
+    session["role"] = user["role"]
+    session["display_name"] = user["display_name"]
+
+    return jsonify({
+        "success": True,
+        "message": "Login successful",
+        "user": {
+            "username": user["username"],
+            "role": user["role"],
+            "display_name": user["display_name"]
+        }
+    })
+
         
     password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
     users = load_users()
