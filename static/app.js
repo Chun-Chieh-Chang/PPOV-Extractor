@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
         isEditMode: false,
         sortKey: null,
         sortDirection: "asc", // "asc" or "desc"
+        user: { username: "guest", role: "inspector", display_name: "品質檢查員" }, // 預設為免密碼品檢員 (Phase D)
     };
 
     // Environment detection for GitHub Pages or local static file
@@ -90,12 +91,59 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnExportPartSpec = document.getElementById("btnExportPartSpec");
     const btnInputInspection = document.getElementById("btnInputInspection");
 
+    // New database and dashboard DOM elements
+    const btnAddNewPart = document.getElementById("btnAddNewPart");
+    const inputSinglePdf = document.getElementById("inputSinglePdf");
+    const btnClearDatabase = document.getElementById("btnClearDatabase");
+    const partEditModal = document.getElementById("partEditModal");
+    const btnCloseEditModal = document.getElementById("btnCloseEditModal");
+    const btnCancelEditModal = document.getElementById("btnCancelEditModal");
+    const btnSavePartEdit = document.getElementById("btnSavePartEdit");
+    const formPartEdit = document.getElementById("formPartEdit");
+    const lblModalTitle = document.getElementById("lblModalTitle");
+    
+    // Stats dashboard widgets
+    const txtStatsTotalParts = document.getElementById("txtStatsTotalParts");
+    const txtStatsTotalFiles = document.getElementById("txtStatsTotalFiles");
+    const txtStatsTotalPresses = document.getElementById("txtStatsTotalPresses");
+    const txtStatsLastSync = document.getElementById("txtStatsLastSync");
+
     // Version Control UI Modal Elements
     const btnVersion = document.getElementById("btnVersion");
     const versionModal = document.getElementById("versionModal");
     const btnCloseVersion = document.getElementById("btnCloseVersion");
 
-    // Grid specification values
+    // Phase D: Auth and Login UI Elements
+    const loginOverlay = document.getElementById("loginOverlay");
+    const formLogin = document.getElementById("formLogin");
+    const login_username = document.getElementById("login_username");
+    const login_password = document.getElementById("login_password");
+    const loginErrorMsg = document.getElementById("loginErrorMsg");
+    const loginErrorText = document.getElementById("loginErrorText");
+    const btnLoginSubmit = document.getElementById("btnLoginSubmit");
+    const userProfile = document.getElementById("userProfile");
+    const txtUserDisplayName = document.getElementById("txtUserDisplayName");
+    const txtUserRole = document.getElementById("txtUserRole");
+    const btnLogout = document.getElementById("btnLogout");
+    const btnLoginPrompt = document.getElementById("btnLoginPrompt");
+    const btnCloseLogin = document.getElementById("btnCloseLogin");
+
+    // Change-password modal DOM references
+    const changePasswordModal = document.getElementById("changePasswordModal");
+    const formChangePassword = document.getElementById("formChangePassword");
+    const btnChangePassword = document.getElementById("btnChangePassword");
+    const btnCloseChangePassword = document.getElementById("btnCloseChangePassword");
+    const btnCancelChangePassword = document.getElementById("btnCancelChangePassword");
+    const btnSubmitChangePassword = document.getElementById("btnSubmitChangePassword");
+    const cp_current = document.getElementById("cp_current");
+    const cp_new = document.getElementById("cp_new");
+    const cp_confirm = document.getElementById("cp_confirm");
+    const cpErrorMsg = document.getElementById("cpErrorMsg");
+    const cpErrorText = document.getElementById("cpErrorText");
+    const cpSuccessMsg = document.getElementById("cpSuccessMsg");
+    const cpSuccessText = document.getElementById("cpSuccessText");
+
+
     const specFields = {
         specPartNo: "產品型號",
         specPartName: "產品名稱",
@@ -267,6 +315,40 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // --- EVENT DELEGATION FOR MASTER TABLE ROWS & BUTTONS (V1.5.1 Performance Optimization) ---
+    tbodyMaster.addEventListener("click", (e) => {
+        const tr = e.target.closest("tr");
+        if (!tr || tr.parentElement !== tbodyMaster) return;
+        
+        const partNo = tr.getAttribute("data-part-no");
+        if (!partNo) return;
+        
+        const item = state.items.find(x => x["產品型號"] === partNo);
+        if (!item) return;
+
+        // Check if edit button was clicked
+        const btnEdit = e.target.closest(".btn-edit-row");
+        if (btnEdit) {
+            e.stopPropagation();
+            openEditModal(item);
+            return;
+        }
+
+        // Check if delete button was clicked
+        const btnDelete = e.target.closest(".btn-delete-row");
+        if (btnDelete) {
+            e.stopPropagation();
+            deletePartRecord(partNo);
+            return;
+        }
+
+        // Otherwise, select the row
+        document.querySelectorAll("#tableMaster tbody tr").forEach(row => row.classList.remove("selected"));
+        tr.classList.add("selected");
+        state.selectedItem = item;
+        renderSpecSheet(item);
+    });
+
 
     // --- BUTTON: SELECT FOLDER ---
     btnSelectFolder.addEventListener("click", async () => {
@@ -390,10 +472,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         tbodyMaster.innerHTML = "";
+        const isAdmin = state.user && state.user.role === "admin";
         if (displayData.length === 0) {
             tbodyMaster.innerHTML = `
                 <tr>
-                    <td colspan="5" class="empty-table-state">
+                    <td colspan="${isAdmin ? 6 : 5}" class="empty-table-state">
                         <i class="fa-solid fa-folder-open empty-icon"></i>
                         <p>未找到符合條件的數據</p>
                     </td>
@@ -402,30 +485,40 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        const fragment = document.createDocumentFragment();
         displayData.forEach(item => {
             const tr = document.createElement("tr");
+            const partNo = item["產品型號"] || "";
+            tr.setAttribute("data-part-no", partNo);
+            
             tr.innerHTML = `
-                <td><strong>${item["產品型號"] || "未知"}</strong></td>
+                <td><strong>${partNo || "未知"}</strong></td>
                 <td>${item["產品名稱"] || "N/A"}</td>
                 <td>${item["圖面版次"] || "N/A"}</td>
                 <td>${item["模具編號"] || "N/A"}</td>
                 <td>${item["射出成型機編號"] || "N/A"}</td>
+                ${isAdmin ? `
+                <td>
+                    <div class="row-actions">
+                        <button class="btn-icon-action btn-edit-row" title="編輯品號"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-icon-action btn-delete-row" title="刪除品號"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </td>
+                ` : ""}
             `;
 
             // Highlight selected row
-            if (state.selectedItem && state.selectedItem["產品型號"] === item["產品型號"]) {
+            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
                 tr.classList.add("selected");
             }
 
-            tr.addEventListener("click", () => {
-                document.querySelectorAll("#tableMaster tbody tr").forEach(row => row.classList.remove("selected"));
-                tr.classList.add("selected");
-                state.selectedItem = item;
-                renderSpecSheet(item);
-            });
-
-            tbodyMaster.appendChild(tr);
+            fragment.appendChild(tr);
         });
+
+        tbodyMaster.appendChild(fragment);
+
+        // Update statistics cards
+        updateStatistics();
     }
 
     // --- RENDER SPECIFICATION SHEET ---
@@ -949,11 +1042,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 footer_cell.alignment = { horizontal: 'right', vertical: 'middle' };
                 
                 // Set optimized print-safe column widths (Total: 102, perfectly scaled to A4 width)
-                worksheet.getColumn(1).width = 38;
-                worksheet.getColumn(2).width = 16;
-                worksheet.getColumn(3).width = 16;
-                worksheet.getColumn(4).width = 16;
-                worksheet.getColumn(5).width = 16;
+                worksheet.getColumn(1).width = 38.5;
+                worksheet.getColumn(2).width = 18.5;
+                worksheet.getColumn(3).width = 30.0;
+                worksheet.getColumn(4).width = 11.3;
+                worksheet.getColumn(5).width = 11.3;
                 
                 // Set Row Heights dynamically only for active rows with content to utilize vertical space
                 worksheet.getRow(1).height = 52;
@@ -971,7 +1064,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     fitToHeight: 1,
                     printArea: `A1:E${curr_row}`, // Explicit print area to prevent blank page prints
                     margins: {
-                        left: 0.31, right: 0.31,
+                        left: 0.51, right: 0.51,
                         top: 0.31, bottom: 0.31,
                         header: 0.0, footer: 0.0
                     },
@@ -1008,6 +1101,728 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // --- NEW DATABASE & DASHBOARD CRUD CONTROLS (V1.5.0 Upgrade) ---
+
+    // 1. Statistics dynamic update
+    function updateStatistics() {
+        if (!txtStatsTotalParts) return;
+        
+        const totalParts = state.items.length;
+        txtStatsTotalParts.textContent = totalParts;
+        
+        const pdfFiles = new Set();
+        state.items.forEach(item => {
+            const fileName = item["檔案名稱"] || "";
+            if (fileName && !fileName.startsWith("MANUAL_")) {
+                pdfFiles.add(fileName);
+            }
+        });
+        txtStatsTotalFiles.textContent = pdfFiles.size;
+        
+        const presses = new Set();
+        state.items.forEach(item => {
+            const pressNo = (item["射出成型機編號"] || "").trim().toUpperCase();
+            if (pressNo && pressNo !== "N/A" && pressNo !== "未知" && pressNo !== "-") {
+                presses.add(pressNo);
+            }
+        });
+        txtStatsTotalPresses.textContent = presses.size;
+        
+        if (!state.lastSyncTime) {
+            const now = new Date();
+            state.lastSyncTime = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        }
+        txtStatsLastSync.textContent = state.lastSyncTime;
+        
+        badgeCount.textContent = totalParts;
+        
+        const masterCardActions = document.querySelector(".master-table-card .card-actions");
+        if (masterCardActions) {
+            masterCardActions.style.display = "flex";
+            
+            // 角色檢查：僅管理員可视行清空與匯出按鈕
+            const isAdmin = state.user && state.user.role === "admin";
+            
+            if (totalParts > 0) {
+                // 清空與匯出按鈕僅對管理員顯示
+                if (btnClearDatabase) btnClearDatabase.style.display = isAdmin ? "inline-flex" : "none";
+                if (btnExportExcel) btnExportExcel.style.display = isAdmin ? "inline-flex" : "none";
+                if (btnExportJson) btnExportJson.style.display = isAdmin ? "inline-flex" : "none";
+                inputSearch.disabled = false;
+            } else {
+                if (btnClearDatabase) btnClearDatabase.style.display = "none";
+                if (btnExportExcel) btnExportExcel.style.display = "none";
+                if (btnExportJson) btnExportJson.style.display = "none";
+                inputSearch.disabled = true;
+            }
+        }
+    }
+
+    // 2. Open Edit/Add Modal
+    function openEditModal(item = null) {
+        if (!partEditModal) return;
+        formPartEdit.reset();
+        
+        if (item) {
+            lblModalTitle.textContent = `編輯品號規格數據 - ${item["產品型號"]}`;
+            const partNoField = document.getElementById("edit_part_no");
+            partNoField.value = item["產品型號"];
+            partNoField.disabled = true;
+            
+            const inputs = formPartEdit.querySelectorAll("input, select");
+            inputs.forEach(input => {
+                const name = input.getAttribute("name");
+                if (name && name !== "產品型號") {
+                    const val = item[name];
+                    input.value = (val !== undefined && val !== null) ? val : "";
+                }
+            });
+        } else {
+            lblModalTitle.textContent = "手動新增品號規格數據";
+            const partNoField = document.getElementById("edit_part_no");
+            partNoField.value = "";
+            partNoField.disabled = false;
+            
+            const inputs = formPartEdit.querySelectorAll("input");
+            inputs.forEach(input => {
+                if (input.id !== "edit_part_no") {
+                    input.value = "";
+                }
+            });
+            const selUnit = formPartEdit.querySelector("select");
+            if (selUnit) selUnit.value = "kg/cm²";
+        }
+        
+        partEditModal.classList.add("active");
+        
+        setTimeout(() => {
+            const editPartNo = document.getElementById("edit_part_no");
+            if (editPartNo && !editPartNo.disabled) {
+                editPartNo.focus();
+            } else {
+                const editPartName = document.getElementById("edit_part_name");
+                if (editPartName) editPartName.focus();
+            }
+        }, 100);
+    }
+
+    // 3. Save part data edit
+    async function savePartEdit() {
+        const editPartNoField = document.getElementById("edit_part_no");
+        const partNo = editPartNoField.value.trim();
+        if (!partNo) {
+            alert("請填寫產品型號 (品號)！");
+            return;
+        }
+        
+        const record = {};
+        const inputs = formPartEdit.querySelectorAll("input, select");
+        inputs.forEach(input => {
+            const name = input.getAttribute("name");
+            if (name) {
+                record[name] = input.value.trim();
+            }
+        });
+        record["產品型號"] = partNo;
+        
+        const isEdit = editPartNoField.disabled;
+        
+        if (isStaticMode) {
+            if (isEdit) {
+                const idx = state.items.findIndex(item => item["產品型號"] === partNo);
+                if (idx !== -1) {
+                    const oldItem = state.items[idx];
+                    state.items[idx] = { ...oldItem, ...record };
+                }
+            } else {
+                if (state.items.some(item => item["產品型號"] === partNo)) {
+                    alert(`品號 ${partNo} 已存在於資料庫中！`);
+                    return;
+                }
+                record["檔案名稱"] = `MANUAL_${partNo}.pdf`;
+                state.items.push(record);
+            }
+            
+            partEditModal.classList.remove("active");
+            renderMasterTable(state.items);
+            
+            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                state.selectedItem = state.items.find(item => item["產品型號"] === partNo);
+                renderSpecSheet(state.selectedItem);
+            }
+            alert(isEdit ? "品號規格修改成功！" : "品號規格新增成功！");
+            return;
+        }
+        
+        try {
+            btnSavePartEdit.disabled = true;
+            btnSavePartEdit.textContent = "儲存中...";
+            
+            const endpoint = isEdit ? "/api/db/edit" : "/api/db/add";
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(record)
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                state.items = result.data;
+                partEditModal.classList.remove("active");
+                renderMasterTable(state.items);
+                
+                if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                    state.selectedItem = state.items.find(item => item["產品型號"] === partNo);
+                    renderSpecSheet(state.selectedItem);
+                }
+                alert(result.message || "儲存成功！");
+            } else {
+                alert(result.message || "儲存失敗！");
+            }
+        } catch (error) {
+            console.error("Save edit error:", error);
+            alert("伺服器通訊錯誤");
+        } finally {
+            btnSavePartEdit.disabled = false;
+            btnSavePartEdit.textContent = "儲存變更";
+        }
+    }
+
+    // 4. Delete part record
+    async function deletePartRecord(partNo) {
+        if (!partNo) return;
+        const confirmDelete = confirm(`⚠️ 確定要刪除品號 ${partNo} 嗎？\n\n此動作將從資料庫中永久移除該筆規格數據！`);
+        if (!confirmDelete) return;
+        
+        if (isStaticMode) {
+            state.items = state.items.filter(item => item["產品型號"] !== partNo);
+            renderMasterTable(state.items);
+            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                state.selectedItem = null;
+                blankPartState.style.display = "flex";
+                partSpecCard.style.display = "none";
+            }
+            alert(`品號 ${partNo} 已在本地刪除！`);
+            return;
+        }
+        
+        try {
+            const response = await fetch("/api/db/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ part_no: partNo })
+            });
+            const result = await response.json();
+            if (result.success) {
+                state.items = result.data;
+                renderMasterTable(state.items);
+                if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                    state.selectedItem = null;
+                    blankPartState.style.display = "flex";
+                    partSpecCard.style.display = "none";
+                }
+                alert(result.message || "刪除成功！");
+            } else {
+                alert(result.message || "刪除失敗！");
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("刪除要求傳送失敗");
+        }
+    }
+
+    // 5. Clear Database
+    async function clearDatabase() {
+        const confirmClear = confirm(`⚠️ 警告：這將會徹底清空資料庫內的所有 PPOV 規格數據！\n\n此操作無法還原，確定要執行嗎？`);
+        if (!confirmClear) return;
+        
+        if (isStaticMode) {
+            state.items = [];
+            renderMasterTable(state.items);
+            state.selectedItem = null;
+            blankPartState.style.display = "flex";
+            partSpecCard.style.display = "none";
+            alert("本地規格資料庫已完全清空！");
+            return;
+        }
+        
+        try {
+            const response = await fetch("/api/db/clear", { method: "POST" });
+            const result = await response.json();
+            if (result.success) {
+                state.items = [];
+                renderMasterTable(state.items);
+                state.selectedItem = null;
+                blankPartState.style.display = "flex";
+                partSpecCard.style.display = "none";
+                alert(result.message || "資料庫清空成功！");
+            } else {
+                alert(result.message || "清空失敗！");
+            }
+        } catch (error) {
+            console.error("Clear database error:", error);
+            alert("清空要求傳送失敗");
+        }
+    }
+
+    // 6. Bind Modal & File Input Event Listeners
+    if (btnAddNewPart) {
+        btnAddNewPart.addEventListener("click", async () => {
+            if (isStaticMode) {
+                alert("💡 提示：從單一 PDF 解析規格需要 Python 後端伺服器運行。\n\n在 GitHub 靜態展示頁面中，請使用上方『載入現有總表』直接選擇總表 Excel 載入數據！");
+                return;
+            }
+            
+            btnAddNewPart.disabled = true;
+            const originalHtml = btnAddNewPart.innerHTML;
+            btnAddNewPart.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在選擇...`;
+
+            try {
+                const response = await fetch("/api/db/import_pdf_native", {
+                    method: "POST"
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    state.items = result.data;
+                    renderMasterTable(state.items);
+                    
+                    // 自動搜尋並選取剛導入的品號，以實現即時渲染預覽
+                    const newPartNo = result.last_part_no;
+                    if (newPartNo) {
+                        const foundItem = state.items.find(x => x["產品型號"] === newPartNo);
+                        if (foundItem) {
+                            state.selectedItem = foundItem;
+                            renderSpecSheet(foundItem);
+                            
+                            // 高亮表格中的選中列
+                            setTimeout(() => {
+                                document.querySelectorAll("#tableMaster tbody tr").forEach(row => {
+                                    if (row.getAttribute("data-part-no") === newPartNo) {
+                                        row.classList.add("selected");
+                                        row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                    } else {
+                                        row.classList.remove("selected");
+                                    }
+                                });
+                            }, 100);
+                        }
+                    }
+                    alert(result.message);
+                } else {
+                    if (result.message && result.message !== "未選擇任何 PDF 檔案") {
+                        alert(result.message || "PDF 導入失敗！");
+                    }
+                }
+            } catch (err) {
+                console.error("Single PDF import error:", err);
+                alert("伺服器連線異常，導入失敗！");
+            } finally {
+                btnAddNewPart.disabled = false;
+                btnAddNewPart.innerHTML = originalHtml;
+            }
+        });
+    }
+    
+    if (btnClearDatabase) {
+        btnClearDatabase.addEventListener("click", clearDatabase);
+    }
+    
+    if (btnCloseEditModal) {
+        btnCloseEditModal.addEventListener("click", () => partEditModal.classList.remove("active"));
+    }
+    
+    if (btnCancelEditModal) {
+        btnCancelEditModal.addEventListener("click", () => partEditModal.classList.remove("active"));
+    }
+    
+    if (btnSavePartEdit) {
+        btnSavePartEdit.addEventListener("click", savePartEdit);
+    }
+    
+    if (partEditModal) {
+        partEditModal.addEventListener("click", (e) => {
+            if (e.target === partEditModal) {
+                partEditModal.classList.remove("active");
+            }
+        });
+        
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && partEditModal.classList.contains("active")) {
+                partEditModal.classList.remove("active");
+            }
+        });
+    }
+
+    // 7. Modal Form Enter Key Navigation
+    const setupModalFormNavigation = () => {
+        if (!formPartEdit) return;
+        const inputs = formPartEdit.querySelectorAll("input, select");
+        inputs.forEach((input, idx) => {
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    const next = inputs[idx + 1];
+                    if (next) {
+                        next.focus();
+                    } else {
+                        savePartEdit();
+                    }
+                }
+            });
+        });
+    };
+    setupModalFormNavigation();
+
+    // 8. Initial Database Fetch (Flask Mode only)
+    async function initFetchDatabase() {
+        if (isStaticMode) {
+            updateStatistics();
+            return;
+        }
+        try {
+            const response = await fetch("/api/db");
+            const result = await response.json();
+            if (result.success && result.count > 0) {
+                state.items = result.data;
+                renderMasterTable(state.items);
+                txtCurrentFolder.textContent = `資料庫已連線，共收錄 ${result.count} 筆規格數據`;
+            } else {
+                updateStatistics();
+            }
+        } catch (err) {
+            console.warn("DB init fetch failed:", err);
+            updateStatistics();
+        }
+    }
+    
+    // --- Phase D: Authentication and RBAC Logic ---
+    async function checkAuthStatus() {
+        if (isStaticMode) {
+            // 靜態模式：預設為 Inspector 免密碼身分，顯示管理員登入按鈕
+            state.user = {
+                role: "inspector",
+                display_name: "品質檢查員"
+            };
+            applyRoleMask("inspector");
+            loginOverlay.classList.remove("active");
+            initFetchDatabase();
+            return;
+        }
+        
+        try {
+            const response = await fetch("/api/auth/status");
+            const result = await response.json();
+            if (result.success && result.logged_in) {
+                state.user = result.user;
+                applyRoleMask(state.user.role);
+                loginOverlay.classList.remove("active");
+                initFetchDatabase();
+            } else {
+                // 預設登入為現場品質檢查員 (免登入存取)
+                state.user = {
+                    role: "inspector",
+                    display_name: "品質檢查員"
+                };
+                applyRoleMask("inspector");
+                loginOverlay.classList.remove("active");
+                initFetchDatabase();
+            }
+        } catch (error) {
+            console.error("Auth status check failed:", error);
+            // 發生異常時以品質檢查員安全唯讀權限開啟
+            state.user = {
+                role: "inspector",
+                display_name: "品質檢查員"
+            };
+            applyRoleMask("inspector");
+            loginOverlay.classList.remove("active");
+            initFetchDatabase();
+        }
+    }
+
+    function applyRoleMask(role) {
+        const isAdmin = role === "admin";
+        const isInspector = role === "inspector";
+
+        // 核心：顯示/隱藏登入使用者狀態顯示區（僅管理員登入時顯示頭像與角色）
+        if (userProfile) {
+            if (isAdmin) {
+                userProfile.style.display = "flex";
+                if (txtUserDisplayName) txtUserDisplayName.textContent = state.user.display_name || "系統管理員";
+                if (txtUserRole) {
+                    txtUserRole.textContent = "Admin";
+                    txtUserRole.className = "user-role-badge admin";
+                }
+            } else {
+                userProfile.style.display = "none";
+            }
+        }
+
+        // 管理員登入提示按鈕（僅在非管理員時顯示）
+        if (btnLoginPrompt) {
+            btnLoginPrompt.style.display = isAdmin ? "none" : "inline-flex";
+        }
+
+        // Header controls
+        if (btnLoadMasterFile) btnLoadMasterFile.style.display = (isAdmin || isInspector) ? "inline-flex" : "none";
+        if (btnSelectFolder) btnSelectFolder.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnStartExtract) {
+            btnStartExtract.style.display = isAdmin ? "inline-flex" : "none";
+            btnStartExtract.disabled = !state.folderPath;
+        }
+
+        // Database controls (left panel card actions)
+        if (btnAddNewPart) btnAddNewPart.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnClearDatabase) btnClearDatabase.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnExportExcel) btnExportExcel.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnExportJson) btnExportJson.style.display = isAdmin ? "inline-flex" : "none";
+
+        // Table header actions
+        const thActions = document.querySelector(".table-actions-header");
+        if (thActions) thActions.style.display = isAdmin ? "table-cell" : "none";
+
+        // Right panel spec sheet controls
+        if (btnInputInspection) btnInputInspection.style.display = (isAdmin || isInspector) ? "inline-flex" : "none";
+        if (btnExportPartSpec) btnExportPartSpec.style.display = (isAdmin || isInspector) ? "inline-flex" : "none";
+
+        // Profile buttons visibility based on admin role
+        if (btnChangePassword) btnChangePassword.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnLogout) btnLogout.style.display = isAdmin ? "inline-flex" : "none";
+    }
+
+    function setupAuthEventListeners() {
+        // 管理員登入點擊提示
+        if (btnLoginPrompt) {
+            btnLoginPrompt.addEventListener("click", () => {
+                loginOverlay.classList.add("active");
+                if (login_username) {
+                    login_username.value = "";
+                    login_username.focus();
+                }
+                if (login_password) login_password.value = "";
+                loginErrorMsg.style.display = "none";
+            });
+        }
+
+        // 登入彈窗關閉按鈕
+        if (btnCloseLogin) {
+            btnCloseLogin.addEventListener("click", () => {
+                loginOverlay.classList.remove("active");
+            });
+        }
+
+        if (formLogin) {
+            formLogin.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const username = login_username.value.trim();
+                const password = login_password.value;
+                
+                if (!username || !password) {
+                    showLoginError("請輸入帳號與密碼");
+                    return;
+                }
+                
+                btnLoginSubmit.disabled = true;
+                const originalHtml = btnLoginSubmit.innerHTML;
+                btnLoginSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在驗證...`;
+                
+                try {
+                    const response = await fetch("/api/auth/login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        state.user = result.user;
+                        applyRoleMask(state.user.role);
+                        
+                        formLogin.reset();
+                        loginErrorMsg.style.display = "none";
+                        loginOverlay.classList.remove("active");
+                        
+                        // 重新繪製彙總表以顯示 Admin 的動作編輯按鈕
+                        renderMasterTable(state.items);
+                    } else {
+                        showLoginError(result.message || "登入失敗");
+                    }
+                } catch (error) {
+                    console.error("Login request failed:", error);
+                    showLoginError("伺服器連線失敗");
+                } finally {
+                    btnLoginSubmit.disabled = false;
+                    btnLoginSubmit.innerHTML = originalHtml;
+                }
+            });
+        }
+        
+        if (btnLogout) {
+            btnLogout.addEventListener("click", async () => {
+                if (isStaticMode) {
+                    state.user = {
+                        role: "inspector",
+                        display_name: "品質檢查員"
+                    };
+                    applyRoleMask("inspector");
+                    loginOverlay.classList.remove("active");
+                    
+                    // 重新渲染 Master Table，完全隱藏管理列
+                    renderMasterTable(state.items);
+                    return;
+                }
+                
+                try {
+                    const response = await fetch("/api/auth/logout", { method: "POST" });
+                    const result = await response.json();
+                    if (result.success) {
+                        state.user = {
+                            role: "inspector",
+                            display_name: "品質檢查員"
+                        };
+                        applyRoleMask("inspector");
+                        loginOverlay.classList.remove("active");
+                        
+                        // 重新渲染 Master Table，完全隱藏管理列
+                        renderMasterTable(state.items);
+                    }
+                } catch (error) {
+                    console.error("Logout request failed:", error);
+                }
+            });
+        }
+    }
+    
+    function showLoginError(msg) {
+        loginErrorText.textContent = msg;
+        loginErrorMsg.style.display = "flex";
+        
+        const card = document.querySelector(".login-card");
+        if (card) {
+            card.style.animation = "none";
+            void card.offsetWidth;
+            card.style.animation = "shake 0.4s ease-in-out";
+        }
+    }
+
+    // ---- 修改密碼 Modal 功能 ----
+
+    function openChangePasswordModal() {
+        if (!changePasswordModal) return;
+        formChangePassword.reset();
+        cpErrorMsg.style.display = "none";
+        cpSuccessMsg.style.display = "none";
+        changePasswordModal.classList.add("active");
+        if (cp_current) cp_current.focus();
+    }
+
+    function closeChangePasswordModal() {
+        if (!changePasswordModal) return;
+        changePasswordModal.classList.remove("active");
+    }
+
+    function showCpError(msg) {
+        cpSuccessMsg.style.display = "none";
+        cpErrorText.textContent = msg;
+        cpErrorMsg.style.display = "flex";
+        // 觸發 shake 動畫
+        const card = changePasswordModal ? changePasswordModal.querySelector(".modal-content") : null;
+        if (card) {
+            card.style.animation = "none";
+            void card.offsetWidth;
+            card.style.animation = "shake 0.4s ease-in-out";
+        }
+    }
+
+    function showCpSuccess(msg) {
+        cpErrorMsg.style.display = "none";
+        cpSuccessText.textContent = msg;
+        cpSuccessMsg.style.display = "flex";
+    }
+
+    function setupChangePasswordListeners() {
+        if (btnChangePassword) {
+            btnChangePassword.addEventListener("click", openChangePasswordModal);
+        }
+        if (btnCloseChangePassword) {
+            btnCloseChangePassword.addEventListener("click", closeChangePasswordModal);
+        }
+        if (btnCancelChangePassword) {
+            btnCancelChangePassword.addEventListener("click", closeChangePasswordModal);
+        }
+        // 點擊遮罩背景關閉
+        if (changePasswordModal) {
+            changePasswordModal.addEventListener("click", (e) => {
+                if (e.target === changePasswordModal) closeChangePasswordModal();
+            });
+        }
+
+        if (formChangePassword) {
+            formChangePassword.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const currentPw = cp_current.value;
+                const newPw = cp_new.value;
+                const confirmPw = cp_confirm.value;
+
+                if (!currentPw || !newPw || !confirmPw) {
+                    showCpError("請填寫所有欄位");
+                    return;
+                }
+                if (newPw !== confirmPw) {
+                    showCpError("新密碼與確認密碼不一致");
+                    return;
+                }
+                if (newPw.length < 6) {
+                    showCpError("新密碼長度至少需要 6 個字元");
+                    return;
+                }
+
+                // 靜態模式：無法真正更改密碼
+                if (isStaticMode) {
+                    showCpError("靜態展示模式不支援密碼修改功能");
+                    return;
+                }
+
+                const originalHtml = btnSubmitChangePassword.innerHTML;
+                btnSubmitChangePassword.disabled = true;
+                btnSubmitChangePassword.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 儲存中...`;
+
+                try {
+                    const response = await fetch("/api/auth/change_password", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            current_password: currentPw,
+                            new_password: newPw,
+                            confirm_password: confirmPw
+                        })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showCpSuccess(result.message || "密碼已成功更新！");
+                        formChangePassword.reset();
+                        // 2 秒後自動關閉
+                        setTimeout(closeChangePasswordModal, 2000);
+                    } else {
+                        showCpError(result.message || "儲存失敗，請重試");
+                    }
+                } catch (error) {
+                    console.error("Change password request failed:", error);
+                    showCpError("伺服器連線失敗，請重試");
+                } finally {
+                    btnSubmitChangePassword.disabled = false;
+                    btnSubmitChangePassword.innerHTML = originalHtml;
+                }
+            });
+        }
+    }
+
+    setupChangePasswordListeners();
+    setupAuthEventListeners();
+    checkAuthStatus();
 
 });
+
 

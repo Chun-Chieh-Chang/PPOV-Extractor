@@ -17,9 +17,42 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.4.0">
+    <link rel="stylesheet" href="static/style.css?v=1.8.0">
 </head>
 <body>
+    <!-- 高級毛玻璃登入遮罩 UI (Premium Glassmorphic Login Overlay) -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card glass-modal">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: -20px; margin-right: -10px;">
+                <button class="modal-close" id="btnCloseLogin" style="font-size: 24px;">&times;</button>
+            </div>
+            <div class="login-logo">
+                <i class="fa-solid fa-microchip-heading logo-icon"></i>
+                <h2>PPOV Specification Manager</h2>
+                <p>射出成型規格數據後台管理系統</p>
+            </div>
+            <form id="formLogin" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="login_username"><i class="fa-solid fa-user"></i> 帳號</label>
+                    <input type="text" id="login_username" name="username" required placeholder="請輸入帳號" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login_password"><i class="fa-solid fa-lock"></i> 密碼</label>
+                    <input type="password" id="login_password" name="password" required placeholder="請輸入密碼" autocomplete="current-password">
+                </div>
+                <div id="loginErrorMsg" class="login-error-msg" style="display: none;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> <span id="loginErrorText"></span>
+                </div>
+                <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-right-to-bracket"></i> 登入系統
+                </button>
+            </form>
+            <div class="login-footer">
+                Wesley Chang @ Mouldex, 2026. QC Dept.
+            </div>
+        </div>
+    </div>
+
     <div class="glass-bg-container">
         <div class="glass-bg-blur"></div>
     </div>
@@ -28,13 +61,36 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.4.0</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.8.0</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
         <div class="header-actions">
+            <!-- 管理員登入按鈕 -->
+            <button id="btnLoginPrompt" class="btn btn-secondary" style="display: none;">
+                <i class="fa-solid fa-right-to-bracket"></i> 管理員登入
+            </button>
+
+            <!-- 登入使用者狀態顯示區 -->
+            <div id="userProfile" class="user-profile" style="display: none;">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user-gear" id="userAvatarIcon"></i>
+                </div>
+                <div class="user-info-text">
+                    <span id="txtUserDisplayName" class="user-name">載入中...</span>
+                    <span id="txtUserRole" class="user-role-badge">Operator</span>
+                </div>
+                <button id="btnChangePassword" class="btn-logout" title="修改密碼" style="background: rgba(96,165,250,0.12); color: var(--color-accent-blue);">
+                    <i class="fa-solid fa-key"></i>
+                </button>
+                <button id="btnLogout" class="btn-logout" title="安全登出">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+
             <!-- 隱藏的原生檔案選擇器，由按鈕觸發，無需 tkinter -->
             <input type="file" id="inputMasterFile" accept=".xlsx,.json" style="display:none;">
+            <input type="file" id="inputSinglePdf" accept=".pdf" style="display:none;">
             <button id="btnLoadMasterFile" class="btn btn-secondary">
                 <i class="fa-solid fa-file-excel"></i> 載入現有總表
             </button>
@@ -42,10 +98,46 @@
                 <i class="fa-solid fa-folder-open"></i> 選擇資料夾
             </button>
             <button id="btnStartExtract" class="btn btn-primary" disabled>
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 開始提取
+                <i class="fa-solid fa-rotate"></i> 自動同步
             </button>
         </div>
     </header>
+
+    <!-- 頂部高質感數據統計看板 (Premium Stats Dashboard Card Grid) -->
+    <section class="stats-dashboard-grid">
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-database"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">總收錄品號數</span>
+                <h3 id="txtStatsTotalParts" class="stats-value">0</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-file-pdf"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">解析 PDF 檔案數</span>
+                <h3 id="txtStatsTotalFiles" class="stats-value">0</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-industry"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">運作射出機台數</span>
+                <h3 id="txtStatsTotalPresses" class="stats-value">0</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">資料庫同步時間</span>
+                <h3 id="txtStatsLastSync" class="stats-value">N/A</h3>
+            </div>
+            <div class="stats-glow"></div>
+        </div>
+    </section>
 
     <main class="app-main-layout">
         <!-- LEFT PANEL: CONTROLS & MASTER TABLE -->
@@ -60,23 +152,27 @@
                         <div class="progress-fill" id="progressFill"></div>
                     </div>
                     <div class="progress-text">
-                        <span>正在提取 PDF 檔案...</span>
+                        <span>正在同步 PDF 檔案...</span>
                         <span id="txtProgressPercent">0%</span>
                     </div>
                 </div>
             </div>
 
-
-
             <div class="card master-table-card">
                 <div class="card-header">
                     <div class="card-title">
-                        <i class="fa-solid fa-list-check"></i> 數據匯總表 (Master Table)
+                        <i class="fa-solid fa-list-check"></i> 數據彙總資料庫 (Master Table)
                         <span id="badgeCount" class="badge">0</span>
                     </div>
-                    <div class="card-actions" id="masterExportGroup" style="display: none;">
+                    <div class="card-actions" id="masterExportGroup">
+                        <button id="btnAddNewPart" class="btn btn-sm btn-primary">
+                            <i class="fa-solid fa-plus"></i> 新增品號
+                        </button>
+                        <button id="btnClearDatabase" class="btn btn-sm btn-danger">
+                            <i class="fa-solid fa-trash-can"></i> 清空資料庫
+                        </button>
                         <button id="btnExportExcel" class="btn btn-sm btn-success">
-                            <i class="fa-solid fa-file-excel"></i> 匯出總表 Excel
+                            <i class="fa-solid fa-file-excel"></i> 匯出 Excel 總表
                         </button>
                         <button id="btnExportJson" class="btn btn-sm btn-json">
                             <i class="fa-solid fa-file-code"></i> 匯出 JSON
@@ -98,13 +194,14 @@
                                 <th data-sort-key="圖面版次" class="sortable">版次 <i class="fa-solid fa-sort sort-icon"></i></th>
                                 <th data-sort-key="模具編號" class="sortable">模具編號 <i class="fa-solid fa-sort sort-icon"></i></th>
                                 <th data-sort-key="射出成型機編號" class="sortable">機台編號 <i class="fa-solid fa-sort sort-icon"></i></th>
+                                <th class="table-actions-header">動作</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyMaster">
                             <tr>
-                                <td colspan="5" class="empty-table-state">
+                                <td colspan="6" class="empty-table-state">
                                     <i class="fa-solid fa-file-import empty-icon"></i>
-                                    <p>請選擇資料夾並匯入 PDF 檔案以顯示數據</p>
+                                    <p>請選擇資料夾並進行自動同步，或手動新增/載入數據</p>
                                 </td>
                             </tr>
                         </tbody>
@@ -295,8 +392,83 @@
             </div>
             <div class="modal-body">
                 <div class="timeline">
-                    <!-- v1.4.0 -->
+                    <!-- v1.8.0 -->
                     <div class="timeline-item current">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.8.0 - 精簡權限控管與公用備份版</span>
+                            <span class="timeline-date">2026-05-28</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">核心</span>免密碼品質檢查員模式：預設為品檢員角色，擁有載入、輸入、及匯出規格單權限。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>管理員密碼驗證：僅系統管理員需密碼登入即可解鎖全部 PDF 提取與 CRUD 修改權限。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>伺服器端公用備份：系統管理員導出總表時，自動同步備份一份至設定權限之公用資料夾內。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.7.1 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.7.1 - 管理員密碼自助修改版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>密碼自助修改功能：允許管理員透過 UI 修改密碼，並即時持久化保存。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>安全邊界設計：密碼長度規範（≥6 字元）與舊密碼驗證。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>修改密碼 Modal：含 Shake 抖動錯誤動畫與成功自動關閉提示。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.7.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.7.0 - 修改密碼 UI 整合版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>在 User Profile 區新增藍色鑰匙按鈕，引導至密碼修改介面。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>前端 app.js 整合修改密碼端點監聽與非同步提交邏輯。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.6.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.6.0 - 單檔 PDF 自動化導入版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">新增</span>「新增品號」對接單一 PDF 解析引擎，實現上傳即解析功能。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>後端 /api/db/import_pdf 端點，支援單檔解析與庫內增量合併。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>導入成功後自動搜尋、高亮、選中該品號並即時預覽。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.5.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.5.0 - 資料庫管理後台與 Morandi 視覺版</span>
+                            <span class="timeline-date">2026-05-27</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">核心</span>將工具升級為「規格數據庫後台管理面板」，支援完整 CRUD。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>冰藍莫蘭迪玻璃卡片設計，頂部配備 4 張動態統計看板。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>大數據渲染效能，採用 Event Delegation 與 DocumentFragment 防凍結。</li>
+                                <li><span class="timeline-tag tag-fix">修正</span>匯入資料即時持久化存檔，防止刷新後數據遺失。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.4.0 -->
+                    <div class="timeline-item">
                         <div class="timeline-badge"></div>
                         <div class="timeline-title">
                             <span>v1.4.0 - 欄位排序與遞迴子資料夾處理版</span>
@@ -375,7 +547,217 @@
             </div>
         </div>
     </div>
+    <!-- 新增/編輯品號規格彈窗 (Add/Edit Part Specification Modal) -->
+    <div id="partEditModal" class="modal-overlay">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square" style="color: var(--color-accent-blue);"></i> <span id="lblModalTitle">手動新增/編輯品號規格</span></h3>
+                <button class="modal-close" id="btnCloseEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formPartEdit" onsubmit="return false;">
+                    <!-- 1. 基本資訊組 -->
+                    <div class="form-section">
+                        <h4><i class="fa-solid fa-circle-info"></i> 基本資訊 (Basic Info)</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="edit_part_no">產品型號 (品號) *</label>
+                                <input type="text" id="edit_part_no" name="產品型號" required placeholder="例如 A02-210-251">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_part_name">產品名稱</label>
+                                <input type="text" id="edit_part_name" name="產品名稱" placeholder="例如 UPPER SHELL">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_drawing_rev">圖面版次</label>
+                                <input type="text" id="edit_drawing_rev" name="圖面版次" placeholder="例如 Rev.B">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_mold_no">模具編號</label>
+                                <input type="text" id="edit_mold_no" name="模具編號" placeholder="例如 M-202506">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_cavitation">模具穴數</label>
+                                <input type="text" id="edit_cavitation" name="模具穴數" placeholder="例如 1x4">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_press_no">射出成型機編號</label>
+                                <input type="text" id="edit_press_no" name="射出成型機編號" placeholder="例如 INJ-08">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_press_tonnage">成型機噸數</label>
+                                <input type="text" id="edit_press_tonnage" name="射出成型機噸數" placeholder="例如 120ton">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_screw_dia">螺桿尺寸</label>
+                                <input type="text" id="edit_screw_dia" name="螺桿尺寸" placeholder="例如 32mm">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_material_no">原料料號</label>
+                                <input type="text" id="edit_material_no" name="原料料號" placeholder="例如 ABS-GP123">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_drying_cond">烘料條件</label>
+                                <input type="text" id="edit_drying_cond" name="烘料條件" placeholder="例如 80℃ / 3hr">
+                            </div>
+                        </div>
+                    </div>
 
-    <script src="static/app.js?v=1.4.0"></script>
+                    <!-- 2. 關鍵製程參數組 -->
+                    <div class="form-section">
+                        <h4><i class="fa-solid fa-sliders"></i> 關鍵成型參數目標與上下限</h4>
+                        <div class="form-table-wrapper">
+                            <table class="form-params-table">
+                                <thead>
+                                    <tr>
+                                        <th>參數項目</th>
+                                        <th>目標值 (Target)</th>
+                                        <th>下限值 (Low)</th>
+                                        <th>上限值 (High)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>實際融膠溫度 (℃)</td>
+                                        <td><input type="text" name="實際融膠溫度_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="實際融膠溫度_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="實際融膠溫度_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>填充時間 (s)</td>
+                                        <td><input type="text" name="填充時間_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="填充時間_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="填充時間_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>產品充填重量 (g)</td>
+                                        <td><input type="text" name="充填階段的產品平均重量_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="充填階段的產品平均重量_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="充填階段的產品平均重量_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>保壓壓力 (kg/cm² 或 bar)</td>
+                                        <td><input type="text" name="保壓壓力_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓壓力_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓壓力_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>保壓時間 (s)</td>
+                                        <td><input type="text" name="保壓時間_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓時間_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓時間_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>保壓完產品重量 (g)</td>
+                                        <td><input type="text" name="保壓完的產品平均重量_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓完的產品平均重量_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="保壓完的產品平均重量_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>冷卻時間 (s)</td>
+                                        <td><input type="text" name="冷卻時間_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="冷卻時間_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="冷卻時間_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>模具溫度設定-母模 (℃)</td>
+                                        <td><input type="text" name="模具溫度設定-母模_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-母模_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-母模_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>模具溫度設定-公模 (℃)</td>
+                                        <td><input type="text" name="模具溫度設定-公模_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-公模_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-公模_上限值" placeholder="-"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>模具溫度設定-滑塊 (℃)</td>
+                                        <td><input type="text" name="模具溫度設定-滑塊_目標值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-滑塊_下限值" placeholder="-"></td>
+                                        <td><input type="text" name="模具溫度設定-滑塊_上限值" placeholder="-"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3. 參考參數組 -->
+                    <div class="form-section">
+                        <h4><i class="fa-solid fa-compass"></i> 參考規格參數</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>充填階段模重 (g)</label>
+                                <input type="text" name="充填階段的模重_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>保壓完模重 (g)</label>
+                                <input type="text" name="保壓完的模重_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>鎖模力設定 (ton)</label>
+                                <input type="text" name="鎖模力_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>生產週期時間 (s)</label>
+                                <input type="text" name="週期時間_目標值" placeholder="-">
+                            </div>
+                            <div class="form-group">
+                                <label>保壓壓力勾稽單位</label>
+                                <select name="_單位_保壓壓力">
+                                    <option value="kg/cm²">kg/cm²</option>
+                                    <option value="bar">bar</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelEditModal">取消</button>
+                <button type="button" class="btn btn-primary" id="btnSavePartEdit">儲存變更</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密碼 Modal -->
+    <div id="changePasswordModal" class="modal-overlay">
+        <div class="modal-content glass-modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-key" style="color: var(--color-accent-blue);"></i> 修改系統管理員密碼</h3>
+                <button class="modal-close" id="btnCloseChangePassword">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formChangePassword" onsubmit="return false;">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="cp_current"><i class="fa-solid fa-lock"></i> 目前密碼</label>
+                        <input type="password" id="cp_current" required placeholder="請輸入目前使用的密碼" autocomplete="current-password">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="cp_new"><i class="fa-solid fa-lock-open"></i> 新密碼 <span style="color: var(--color-secondary-text); font-weight: 400; font-size: 12px;">(至少 6 個字元)</span></label>
+                        <input type="password" id="cp_new" required placeholder="請設定新密碼" autocomplete="new-password">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="cp_confirm"><i class="fa-solid fa-lock-open"></i> 確認新密碼</label>
+                        <input type="password" id="cp_confirm" required placeholder="請再次輸入新密碼" autocomplete="new-password">
+                    </div>
+                    <div id="cpErrorMsg" class="login-error-msg" style="display: none; margin-top: 8px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <span id="cpErrorText"></span>
+                    </div>
+                    <div id="cpSuccessMsg" style="display: none; margin-top: 8px; color: var(--color-success); font-size: 14px; display: flex; gap: 6px; align-items: center;">
+                        <i class="fa-solid fa-circle-check"></i> <span id="cpSuccessText"></span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelChangePassword">取消</button>
+                <button type="submit" form="formChangePassword" class="btn btn-primary" id="btnSubmitChangePassword">
+                    <i class="fa-solid fa-floppy-disk"></i> 儲存新密碼
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/app.js?v=1.8.0"></script>
 </body>
 </html>

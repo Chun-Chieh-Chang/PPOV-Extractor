@@ -4,7 +4,8 @@ import io
 import json
 import webbrowser
 from threading import Timer
-from flask import Flask, jsonify, request, render_template, send_file
+import hashlib
+from flask import Flask, jsonify, request, render_template, send_file, session
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -20,18 +21,187 @@ BASE_PATH = get_base_path()
 
 # Ensure workspace is in python path
 sys.path.append(BASE_PATH)
-from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dialog
+from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dialog, _select_files_dialog
 
 app = Flask(__name__, 
             static_folder=os.path.join(BASE_PATH, 'static'),
             template_folder=os.path.join(BASE_PATH, 'templates'))
 
-# Global state to store extracted data in memory
+app.secret_key = "ppov_extractor_secret_key_123!"
+
+def load_users():
+    users_path = os.path.join(BASE_PATH, "users.json")
+    if not os.path.exists(users_path):
+        try:
+            default_data = {
+                "users": [
+                    {
+                        "username": "admin",
+                        "role": "admin",
+                        "display_name": "系統管理員",
+                        "password_hash": "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
+                    }
+                ]
+            }
+            with open(users_path, "w", encoding="utf-8") as f:
+                json.dump(default_data, f, ensure_ascii=False, indent=2)
+            print("Successfully initialized default users.json")
+        except Exception as e:
+            print(f"Error initializing default users.json: {e}")
+
+    if os.path.exists(users_path):
+        try:
+            with open(users_path, "r", encoding="utf-8") as f:
+                return json.load(f).get("users", [])
+        except Exception as e:
+            print(f"Error loading users.json: {e}")
+    return []
+
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("role") != "admin":
+            return jsonify({"success": False, "message": "拒絕存取：您不具備管理員權限！"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    payload = request.json or {}
+    username = payload.get("username", "").strip().lower()
+    password = payload.get("password", "")
+    
+    if not username or not password:
+        return jsonify({"success": False, "message": "請輸入帳號與密碼"})
+        
+    password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    users = load_users()
+    
+    user = next((u for u in users if u["username"].lower() == username and u["password_hash"] == password_hash), None)
+    
+    if not user:
+        return jsonify({"success": False, "message": "帳號或密碼錯誤"})
+        
+    session["username"] = user["username"]
+    session["role"] = user["role"]
+    session["display_name"] = user["display_name"]
+    
+    return jsonify({
+        "success": True,
+        "message": "登入成功！",
+        "user": {
+            "username": user["username"],
+            "role": user["role"],
+            "display_name": user["display_name"]
+        }
+    })
+
+@app.route("/api/auth/logout", methods=["POST"])
+def auth_logout():
+    session.clear()
+    return jsonify({"success": True, "message": "已成功登出"})
+
+@app.route("/api/auth/status", methods=["GET"])
+def auth_status():
+    if "username" in session:
+        return jsonify({
+            "success": True,
+            "logged_in": True,
+            "user": {
+                "username": session["username"],
+                "role": session["role"],
+                "display_name": session["display_name"]
+            }
+        })
+    return jsonify({
+        "success": True,
+        "logged_in": False,
+        "user": {
+            "username": "guest",
+            "role": "inspector",
+            "display_name": "品質檢查員"
+        }
+    })
+
+@app.route("/api/auth/change_password", methods=["POST"])
+@admin_required
+def auth_change_password():
+    payload = request.json or {}
+    current_password = payload.get("current_password", "")
+    new_password = payload.get("new_password", "")
+    confirm_password = payload.get("confirm_password", "")
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({"success": False, "message": "請填寫所有欄位"})
+
+    if new_password != confirm_password:
+        return jsonify({"success": False, "message": "新密碼與確認密碼不一致"})
+
+    if len(new_password) < 6:
+        return jsonify({"success": False, "message": "新密碼長度至少需要 6 個字元"})
+
+    username = session.get("username")
+    current_hash = hashlib.sha256(current_password.encode("utf-8")).hexdigest()
+    new_hash = hashlib.sha256(new_password.encode("utf-8")).hexdigest()
+
+    users_path = os.path.join(BASE_PATH, "users.json")
+    try:
+        with open(users_path, "r", encoding="utf-8") as f:
+            users_data = json.load(f)
+
+        user_found = False
+        for user in users_data.get("users", []):
+            if user["username"].lower() == username.lower():
+                if user["password_hash"] != current_hash:
+                    return jsonify({"success": False, "message": "目前密碼錯誤，請重新確認"})
+                user["password_hash"] = new_hash
+                user_found = True
+                break
+
+        if not user_found:
+            return jsonify({"success": False, "message": "找不到使用者資料"})
+
+        with open(users_path, "w", encoding="utf-8") as f:
+            json.dump(users_data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"success": True, "message": "密碼已成功更新！"})
+
+    except Exception as e:
+        print(f"Error changing password: {e}")
+        return jsonify({"success": False, "message": f"儲存失敗：{str(e)}"})
+
+
 db = {
     "extracted_data": [],
     "config": None,
     "last_folder": ""
 }
+
+def get_db_file_path():
+    return os.path.join(BASE_PATH, "ppov_database.json")
+
+def load_db_from_file():
+    db_path = get_db_file_path()
+    if os.path.exists(db_path):
+        try:
+            with open(db_path, "r", encoding="utf-8") as f:
+                db["extracted_data"] = json.load(f)
+            print(f"Loaded {len(db['extracted_data'])} records from ppov_database.json")
+        except Exception as e:
+            print(f"Error loading ppov_database.json: {e}")
+            db["extracted_data"] = []
+    else:
+        db["extracted_data"] = []
+
+def save_db_to_file():
+    db_path = get_db_file_path()
+    try:
+        with open(db_path, "w", encoding="utf-8") as f:
+            json.dump(db["extracted_data"], f, ensure_ascii=False, indent=2)
+        print(f"Successfully saved {len(db['extracted_data'])} records to ppov_database.json")
+    except Exception as e:
+        print(f"Error saving ppov_database.json: {e}")
 
 def load_config():
     config_path = os.path.join(BASE_PATH, "config.json")
@@ -40,10 +210,16 @@ def load_config():
             db["config"] = json.load(f)
     except Exception as e:
         print(f"Error loading config.json: {e}")
+    load_db_from_file()
 
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@app.route("/favicon.ico")
+def favicon():
+    """Silences browser favicon.ico 404 console errors by returning 204 No Content."""
+    return "", 204
 
 @app.route("/api/config", methods=["GET"])
 def get_config_endpoint():
@@ -52,6 +228,7 @@ def get_config_endpoint():
     return jsonify(db["config"])
 
 @app.route("/api/select_folder", methods=["POST"])
+@admin_required
 def select_folder():
     """Triggers native OS directory picker."""
     try:
@@ -64,17 +241,266 @@ def select_folder():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
+@app.route("/api/db", methods=["GET"])
+def get_database():
+    if not db["config"]:
+        load_config()
+    load_db_from_file()
+    return jsonify({
+        "success": True,
+        "count": len(db["extracted_data"]),
+        "data": db["extracted_data"],
+        "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
+    })
+
+@app.route("/api/db/add", methods=["POST"])
+@admin_required
+def db_add_record():
+    new_record = request.json
+    if not new_record or not new_record.get("產品型號"):
+        return jsonify({"success": False, "message": "產品型號（品號）為必填項"})
+    
+    part_no = new_record.get("產品型號").strip()
+    
+    # Check duplicate
+    if any(item.get("產品型號") == part_no for item in db["extracted_data"]):
+        return jsonify({"success": False, "message": f"品號 {part_no} 已存在於資料庫中"})
+    
+    # Supply defaults
+    if not new_record.get("檔案名稱"):
+        new_record["檔案名稱"] = f"MANUAL_{part_no}.pdf"
+        
+    db["extracted_data"].append(new_record)
+    save_db_to_file()
+    
+    return jsonify({
+        "success": True, 
+        "message": f"品號 {part_no} 新增成功", 
+        "data": db["extracted_data"]
+    })
+
+@app.route("/api/db/edit", methods=["POST"])
+@admin_required
+def db_edit_record():
+    edit_data = request.json
+    if not edit_data or not edit_data.get("產品型號"):
+        return jsonify({"success": False, "message": "無效的修改請求，品號必填"})
+        
+    part_no = edit_data.get("產品型號").strip()
+    
+    # Find and update
+    found = False
+    for i, item in enumerate(db["extracted_data"]):
+        if item.get("產品型號") == part_no:
+            # Update values
+            for k, v in edit_data.items():
+                item[k] = v
+            found = True
+            break
+            
+    if not found:
+        return jsonify({"success": False, "message": f"在資料庫中找不到品號 {part_no}"})
+        
+    save_db_to_file()
+    return jsonify({
+        "success": True, 
+        "message": f"品號 {part_no} 修改成功", 
+        "data": db["extracted_data"]
+    })
+
+@app.route("/api/db/delete", methods=["POST"])
+@admin_required
+def db_delete_record():
+    payload = request.json or {}
+    part_no = payload.get("part_no")
+    if not part_no:
+        return jsonify({"success": False, "message": "無效的刪除請求，品號必填"})
+        
+    initial_len = len(db["extracted_data"])
+    db["extracted_data"] = [item for item in db["extracted_data"] if item.get("產品型號") != part_no]
+    
+    if len(db["extracted_data"]) == initial_len:
+        return jsonify({"success": False, "message": f"在資料庫中找不到品號 {part_no}"})
+        
+    save_db_to_file()
+    return jsonify({
+        "success": True, 
+        "message": f"品號 {part_no} 刪除成功", 
+        "data": db["extracted_data"]
+    })
+
+@app.route("/api/db/clear", methods=["POST"])
+@admin_required
+def db_clear():
+    db["extracted_data"] = []
+    save_db_to_file()
+    return jsonify({
+        "success": True, 
+        "message": "資料庫已完全清空", 
+        "data": []
+    })
+
+@app.route("/api/db/import_pdf", methods=["POST"])
+@admin_required
+def db_import_single_pdf():
+    """接收單一 PPOV PDF 檔案，提取其成型參數，並自動新增/更新至資料庫中。"""
+    try:
+        if "file" not in request.files:
+            return jsonify({"success": False, "message": "未收到檔案"})
+            
+        f = request.files["file"]
+        if not f or f.filename == "":
+            return jsonify({"success": False, "message": "未選擇任何檔案"})
+            
+        if not f.filename.lower().endswith(".pdf"):
+            return jsonify({"success": False, "message": "不支援的格式，請選擇 .pdf 規格單檔案"})
+            
+        filename = f.filename
+        
+        # 暫存於 output/ 目錄中以便進行實體路徑提取
+        temp_dir = os.path.join(BASE_PATH, "output")
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+            
+        temp_filepath = os.path.join(temp_dir, filename)
+        f.save(temp_filepath)
+        
+        if not db["config"]:
+            load_config()
+            
+        # 調用核心提取函式
+        data = extract_data_from_pdf(temp_filepath, db["config"])
+        
+        # 移除暫存檔案
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
+            
+        if not data:
+            return jsonify({"success": False, "message": f"檔案 {filename} 解析失敗或格式不合"})
+            
+        part_no = data.get("產品型號", "").strip()
+        if not part_no or part_no == "未找到":
+            return jsonify({"success": False, "message": f"在 PDF 規格書 {filename} 中未找到有效的產品型號"})
+            
+        load_db_from_file()
+        
+        # 檢查是否已存在，進行覆蓋/新增合併
+        existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("產品型號") == part_no), None)
+        
+        if existing_idx is not None:
+            db["extracted_data"][existing_idx] = data
+            msg = f"品號 {part_no} 已存在於資料庫中，已成功重新解析 PDF 並覆蓋規格參數！"
+        else:
+            db["extracted_data"].append(data)
+            msg = f"品號 {part_no} 解析成功，已自動導入規格資料庫！"
+            
+        save_db_to_file()
+        
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "count": len(db["extracted_data"]),
+            "data": db["extracted_data"],
+            "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route("/api/db/import_pdf_native", methods=["POST"])
+@admin_required
+def db_import_pdf_native():
+    """透過後端原生 OS 檔案選擇視窗導入一或多個 PPOV PDF 檔案並自動解析、存檔。"""
+    try:
+        # 顯示原生檔案多選彈窗
+        selected_files = _select_files_dialog(
+            title="選擇 PPOV PDF 規格書檔案 (可多選)",
+            initial_dir=db["last_folder"] or BASE_PATH,
+            file_types=[("PDF Files", "*.pdf")]
+        )
+        
+        if not selected_files:
+            return jsonify({"success": False, "message": "未選擇任何 PDF 檔案"})
+            
+        if not db["config"]:
+            load_config()
+            
+        load_db_from_file()
+        
+        imported_parts = []
+        updated_count = 0
+        added_count = 0
+        
+        for filepath in selected_files:
+            if not os.path.exists(filepath):
+                continue
+            
+            # 更新 last_folder 為最後選擇檔案的資料夾
+            db["last_folder"] = os.path.dirname(filepath)
+            
+            # 調用核心提取函式
+            data = extract_data_from_pdf(filepath, db["config"])
+            if not data:
+                continue
+                
+            part_no = data.get("產品型號", "").strip()
+            if not part_no or part_no == "未找到":
+                continue
+                
+            # 檢查是否已存在，進行覆蓋/新增合併
+            existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("產品型號") == part_no), None)
+            
+            if existing_idx is not None:
+                db["extracted_data"][existing_idx] = data
+                updated_count += 1
+            else:
+                db["extracted_data"].append(data)
+                added_count += 1
+                
+            imported_parts.append(part_no)
+            
+        if not imported_parts:
+            return jsonify({"success": False, "message": "所選的檔案皆解析失敗或格式不符"})
+            
+        save_db_to_file()
+        
+        # 建立回報訊息
+        msg = f"成功導入 {len(imported_parts)} 筆規格！"
+        if added_count > 0:
+            msg += f" 新增 {added_count} 筆"
+        if updated_count > 0:
+            msg += f" 覆蓋/更新 {updated_count} 筆"
+            
+        # 若只導入單一品號，回傳該品號以便前端高亮與預覽
+        last_part_no = imported_parts[-1] if len(imported_parts) == 1 else None
+        
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "count": len(db["extracted_data"]),
+            "data": db["extracted_data"],
+            "last_part_no": last_part_no,
+            "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 @app.route("/api/extract", methods=["POST"])
+@admin_required
 def extract_data():
-    """Performs extraction on all PDF files in the selected folder."""
+    """Performs incremental extraction on PDF files in the selected folder."""
     data_payload = request.json or {}
     folder_path = data_payload.get("path", db["last_folder"])
+    is_incremental = data_payload.get("incremental", True)
     
     if not folder_path or not os.path.exists(folder_path):
         return jsonify({"success": False, "message": "無效的資料夾路徑"})
     
     if not db["config"]:
         load_config()
+    
+    # Ensure DB is loaded
+    if not db["extracted_data"]:
+        load_db_from_file()
         
     pdf_files = []
     for root, dirs, files in os.walk(folder_path):
@@ -85,24 +511,51 @@ def extract_data():
     if not pdf_files:
         return jsonify({"success": False, "message": "此資料夾內無任何 PDF 檔案"})
         
-    results = []
-    for pdf_path in pdf_files:
+    # Incremental sync: filter out already processed PDF files
+    existing_filenames = {item.get("檔案名稱") for item in db["extracted_data"] if item.get("檔案名稱")}
+    
+    if is_incremental:
+        files_to_process = [p for p in pdf_files if os.path.basename(p) not in existing_filenames]
+    else:
+        files_to_process = pdf_files
+        
+    if not files_to_process:
+        return jsonify({
+            "success": True, 
+            "message": "所有 PDF 檔案皆已在資料庫中，無需同步！",
+            "count": len(db["extracted_data"]), 
+            "data": db["extracted_data"],
+            "fields": [f["name"] for f in db["config"]["fields_to_extract"]]
+        })
+        
+    new_results = []
+    for pdf_path in files_to_process:
         try:
             data = extract_data_from_pdf(pdf_path, db["config"])
             if data:
-                results.append(data)
+                new_results.append(data)
         except Exception as e:
             print(f"Error processing {pdf_path}: {e}")
             
-    db["extracted_data"] = results
+    if is_incremental:
+        existing_by_file = {item.get("檔案名稱"): item for item in db["extracted_data"] if item.get("檔案名稱")}
+        for item in new_results:
+            existing_by_file[item.get("檔案名稱")] = item
+        db["extracted_data"] = list(existing_by_file.values())
+    else:
+        db["extracted_data"] = new_results
+        
+    save_db_to_file()
+    
     return jsonify({
         "success": True, 
-        "count": len(results), 
-        "data": results,
+        "count": len(db["extracted_data"]), 
+        "data": db["extracted_data"],
         "fields": [f["name"] for f in db["config"]["fields_to_extract"]]
     })
 
 @app.route("/api/export_master", methods=["POST"])
+@admin_required
 def export_master():
     """Generates and exports the master Excel or JSON file in memory."""       
     format_type = request.json.get("format", "excel")
@@ -112,6 +565,28 @@ def export_master():
     df = pd.DataFrame(db["extracted_data"])
     column_order = ["檔案名稱"] + [field["name"] for field in db["config"]["fields_to_extract"]]
     df = df[column_order]
+
+    # Save a backup copy to the configured public folder on the server
+    if not db["config"]:
+        load_config()
+    public_folder = db["config"].get("public_export_folder", "output/public")
+    abs_public_folder = os.path.abspath(os.path.join(BASE_PATH, public_folder))
+    
+    try:
+        if not os.path.exists(abs_public_folder):
+            os.makedirs(abs_public_folder)
+        
+        backup_filename = "PPOV_Master_Table.xlsx" if format_type == "excel" else "PPOV_Master_Table.json"
+        backup_path = os.path.join(abs_public_folder, backup_filename)
+        
+        if format_type == "excel":
+            df.to_excel(backup_path, index=False, engine='openpyxl')
+        else:
+            with open(backup_path, "w", encoding="utf-8") as f:
+                json.dump(db["extracted_data"], f, ensure_ascii=False, indent=2)
+        print(f"Successfully saved server-side public backup to: {backup_path}")
+    except Exception as e:
+        print(f"Error saving public backup copy: {e}")
 
     if format_type == "excel":
         buffer = io.BytesIO()
@@ -360,11 +835,11 @@ def export_part_excel():
     author_cell.alignment = Alignment(horizontal="right", vertical="center")
     
     # Set optimized print-safe column widths (Total: 78, perfectly fits A4 portrait width)
-    ws.column_dimensions['A'].width = 30  # Parameter Label
-    ws.column_dimensions['B'].width = 12  # Target Value
-    ws.column_dimensions['C'].width = 12  # Low Value
-    ws.column_dimensions['D'].width = 12  # High Value
-    ws.column_dimensions['E'].width = 12  # Actual Value/Check Record
+    ws.column_dimensions['A'].width = 38.5  # Parameter Label
+    ws.column_dimensions['B'].width = 18.5  # Target Value
+    ws.column_dimensions['C'].width = 30.0  # Low Value
+    ws.column_dimensions['D'].width = 11.3  # High Value
+    ws.column_dimensions['E'].width = 11.3  # Actual Value/Check Record
     
     # ─── ROW HEIGHTS (Only active rows with content, preventing trailing page overflows) ───
     ws.row_dimensions[1].height = 40
@@ -380,11 +855,17 @@ def export_part_excel():
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_area = f'A1:E{curr_row}'  # Explicitly restrict print area
     
-    # Set elegant margins (0.5 inch / 1.2 cm)
-    ws.page_margins.left = 0.5
-    ws.page_margins.right = 0.5
-    ws.page_margins.top = 0.5
-    ws.page_margins.bottom = 0.5
+    # Set customized print-safe margins (Left/Right: 1.3cm / 0.51in, Top/Bottom: 0.8cm / 0.31in, Header/Footer: 0)
+    ws.page_margins.left = 0.51
+    ws.page_margins.right = 0.51
+    ws.page_margins.top = 0.31
+    ws.page_margins.bottom = 0.31
+    ws.page_margins.header = 0.0
+    ws.page_margins.footer = 0.0
+    
+    # Center on page Horizontally and Vertically
+    ws.print_options.horizontalCentered = True
+    ws.print_options.verticalCentered = True
         
     buffer = io.BytesIO()
     wb.save(buffer)
@@ -431,6 +912,7 @@ def load_master_file():
             return jsonify({"success": False, "message": "不支援的格式，請選擇 .xlsx 或 .json"})
 
         db["extracted_data"] = results
+        save_db_to_file()
 
         if not db["config"]:
             load_config()
@@ -452,5 +934,7 @@ def launch_browser():
 if __name__ == "__main__":
     load_config()
     # Start server and auto-launch default browser in a split second
-    Timer(1.0, launch_browser).start()
+    # 防止 Flask 在 Debug Mode 下因為 Reloader 機制啟動兩次而開啟兩個網頁
+    if not os.environ.get("WERKZEUG_RUN_MAIN"):
+        Timer(1.0, launch_browser).start()
     app.run(port=5000, debug=True)
