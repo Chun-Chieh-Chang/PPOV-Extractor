@@ -4,9 +4,8 @@
 
 ### Scope
 
-- **免密碼品質檢查員模式**：任何人進入網頁即免密碼、免登入，自動擁有品質檢查員（`inspector`）權限，執行載入總表、輸入實際值、及一鍵匯出單品 spec 表單。
-- **管理員密碼驗證 (Admin Elevation)**：僅有系統管理員（`admin`）需要輸入密碼（密碼：`Admin123`，安全雜湊加密存儲，無任何明文洩漏）即可解鎖 PDF 同步與 CRUD 修改等高級管理功能。
-- **伺服器端公用備份**：系統管理員匯出 Master Table 檔案時，系統會自動在伺服器端配置的公用資料夾中同步保存備份複本，供網路共享使用。
+- **免密碼品質檢查員模式**：任何人進入網頁即免密碼、免登入，自動擁有品質檢查員（`inspector`）權限，執行載入總表、輸入實際值、及一鍵匯出單品 spec- **伺服器端公用備份**：系統管理員匯出 Master Table 檔案時，系統會自動在伺服器端配置的公用資料夾中同步保存備份複本，供網路共享使用。
+- **Excel 欄寬配置優化**：微調輸出規格表單欄寬預設比例以優化 A4 列印排版視覺平衡。
 
 ### Today's Changes Summary
 
@@ -15,6 +14,15 @@
 3. **app.py (後端安全性)**：
    - 更新 `/api/auth/status` 使未登入之 session 預設回傳 `inspector` 角色。
    - 為所有高級管理、CRUD 刪修端點以及 `/api/export_master` 強制掛載 `@admin_required` 裝飾器。
+   - 移除 `/api/load_master_file` 之限制裝飾器，使品檢員能無密碼匯入總表。
+   - 在 `/api/export_master` 中引入公用備份邏輯，將生成的 Excel/JSON 寫入伺服器端指定路徑。
+4. **static/app.js (前端控制遮罩)**：
+   - 初始化 state 中 user 角色為 `inspector`。
+   - 重構 `applyRoleMask`：品檢員僅可見 `Load Master File`、`Input Inspection` 與 `Export Part Spec`；管理員登入後可見全部管理元件與 CRUD 表格編輯列。
+   - 登入與登出流程優化，在登出時無縫復原為 `inspector` 免密碼角色。
+5. **index.html & templates/index.html**：同步升級 timeline changelog 與引用版本號至 `v1.8.0`（緩存重新導向）。
+6. **Excel 雙引擎欄寬微調 (Column Widths)**：
+   - 調整後端（openpyxl in `app.py`）與前端（ExcelJS in `static/app.js`）雙輸出引擎之預設欄寬參數（A欄 38.5、B欄 18.5、C欄 30.0、D欄 11.3、E欄 11.3），完美貼合數據內容長度，防止文字折行或溢出。 - 為所有高級管理、CRUD 刪修端點以及 `/api/export_master` 強制掛載 `@admin_required` 裝飾器。
    - 移除 `/api/load_master_file` 之限制裝飾器，使品檢員能無密碼匯入總表。
    - 在 `/api/export_master` 中引入公用備份邏輯，將生成的 Excel/JSON 寫入伺服器端指定路徑。
 4. **static/app.js (前端控制遮罩)**：

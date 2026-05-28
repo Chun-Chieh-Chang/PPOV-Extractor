@@ -835,11 +835,11 @@ def export_part_excel():
     author_cell.alignment = Alignment(horizontal="right", vertical="center")
     
     # Set optimized print-safe column widths (Total: 78, perfectly fits A4 portrait width)
-    ws.column_dimensions['A'].width = 30  # Parameter Label
-    ws.column_dimensions['B'].width = 12  # Target Value
-    ws.column_dimensions['C'].width = 12  # Low Value
-    ws.column_dimensions['D'].width = 12  # High Value
-    ws.column_dimensions['E'].width = 12  # Actual Value/Check Record
+    ws.column_dimensions['A'].width = 38.5  # Parameter Label
+    ws.column_dimensions['B'].width = 18.5  # Target Value
+    ws.column_dimensions['C'].width = 30.0  # Low Value
+    ws.column_dimensions['D'].width = 11.3  # High Value
+    ws.column_dimensions['E'].width = 11.3  # Actual Value/Check Record
     
     # ─── ROW HEIGHTS (Only active rows with content, preventing trailing page overflows) ───
     ws.row_dimensions[1].height = 40
@@ -855,11 +855,17 @@ def export_part_excel():
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_area = f'A1:E{curr_row}'  # Explicitly restrict print area
     
-    # Set elegant margins (0.5 inch / 1.2 cm)
-    ws.page_margins.left = 0.5
-    ws.page_margins.right = 0.5
-    ws.page_margins.top = 0.5
-    ws.page_margins.bottom = 0.5
+    # Set customized print-safe margins (Left/Right: 1.3cm / 0.51in, Top/Bottom: 0.8cm / 0.31in, Header/Footer: 0)
+    ws.page_margins.left = 0.51
+    ws.page_margins.right = 0.51
+    ws.page_margins.top = 0.31
+    ws.page_margins.bottom = 0.31
+    ws.page_margins.header = 0.0
+    ws.page_margins.footer = 0.0
+    
+    # Center on page Horizontally and Vertically
+    ws.print_options.horizontalCentered = True
+    ws.print_options.verticalCentered = True
         
     buffer = io.BytesIO()
     wb.save(buffer)

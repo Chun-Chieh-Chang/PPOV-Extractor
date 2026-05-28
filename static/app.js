@@ -1042,11 +1042,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 footer_cell.alignment = { horizontal: 'right', vertical: 'middle' };
                 
                 // Set optimized print-safe column widths (Total: 102, perfectly scaled to A4 width)
-                worksheet.getColumn(1).width = 38;
-                worksheet.getColumn(2).width = 16;
-                worksheet.getColumn(3).width = 16;
-                worksheet.getColumn(4).width = 16;
-                worksheet.getColumn(5).width = 16;
+                worksheet.getColumn(1).width = 38.5;
+                worksheet.getColumn(2).width = 18.5;
+                worksheet.getColumn(3).width = 30.0;
+                worksheet.getColumn(4).width = 11.3;
+                worksheet.getColumn(5).width = 11.3;
                 
                 // Set Row Heights dynamically only for active rows with content to utilize vertical space
                 worksheet.getRow(1).height = 52;
@@ -1064,7 +1064,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     fitToHeight: 1,
                     printArea: `A1:E${curr_row}`, // Explicit print area to prevent blank page prints
                     margins: {
-                        left: 0.31, right: 0.31,
+                        left: 0.51, right: 0.51,
                         top: 0.31, bottom: 0.31,
                         header: 0.0, footer: 0.0
                     },
