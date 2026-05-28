@@ -1506,12 +1506,6 @@ document.addEventListener("DOMContentLoaded", () => {
             };
             applyRoleMask("inspector");
             loginOverlay.classList.remove("active");
-            userProfile.style.display = "flex";
-            txtUserDisplayName.textContent = state.user.display_name;
-            txtUserRole.textContent = "Inspector";
-            txtUserRole.className = "user-role-badge inspector";
-            if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
-            
             initFetchDatabase();
             return;
         }
@@ -1523,12 +1517,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 state.user = result.user;
                 applyRoleMask(state.user.role);
                 loginOverlay.classList.remove("active");
-                userProfile.style.display = "flex";
-                txtUserDisplayName.textContent = state.user.display_name;
-                txtUserRole.textContent = "Admin";
-                txtUserRole.className = "user-role-badge admin";
-                if (btnLoginPrompt) btnLoginPrompt.style.display = "none";
-                
                 initFetchDatabase();
             } else {
                 // 預設登入為現場品質檢查員 (免登入存取)
@@ -1538,12 +1526,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
                 applyRoleMask("inspector");
                 loginOverlay.classList.remove("active");
-                userProfile.style.display = "flex";
-                txtUserDisplayName.textContent = state.user.display_name;
-                txtUserRole.textContent = "Inspector";
-                txtUserRole.className = "user-role-badge inspector";
-                if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
-                
                 initFetchDatabase();
             }
         } catch (error) {
@@ -1555,11 +1537,6 @@ document.addEventListener("DOMContentLoaded", () => {
             };
             applyRoleMask("inspector");
             loginOverlay.classList.remove("active");
-            userProfile.style.display = "flex";
-            txtUserDisplayName.textContent = state.user.display_name;
-            txtUserRole.textContent = "Inspector";
-            txtUserRole.className = "user-role-badge inspector";
-            if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
             initFetchDatabase();
         }
     }
@@ -1567,6 +1544,25 @@ document.addEventListener("DOMContentLoaded", () => {
     function applyRoleMask(role) {
         const isAdmin = role === "admin";
         const isInspector = role === "inspector";
+
+        // 核心：顯示/隱藏登入使用者狀態顯示區（僅管理員登入時顯示頭像與角色）
+        if (userProfile) {
+            if (isAdmin) {
+                userProfile.style.display = "flex";
+                if (txtUserDisplayName) txtUserDisplayName.textContent = state.user.display_name || "系統管理員";
+                if (txtUserRole) {
+                    txtUserRole.textContent = "Admin";
+                    txtUserRole.className = "user-role-badge admin";
+                }
+            } else {
+                userProfile.style.display = "none";
+            }
+        }
+
+        // 管理員登入提示按鈕（僅在非管理員時顯示）
+        if (btnLoginPrompt) {
+            btnLoginPrompt.style.display = isAdmin ? "none" : "inline-flex";
+        }
 
         // Header controls
         if (btnLoadMasterFile) btnLoadMasterFile.style.display = (isAdmin || isInspector) ? "inline-flex" : "none";
@@ -1645,13 +1641,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         
                         formLogin.reset();
                         loginErrorMsg.style.display = "none";
-                        
                         loginOverlay.classList.remove("active");
-                        userProfile.style.display = "flex";
-                        txtUserDisplayName.textContent = state.user.display_name;
-                        txtUserRole.textContent = "Admin";
-                        txtUserRole.className = "user-role-badge admin";
-                        if (btnLoginPrompt) btnLoginPrompt.style.display = "none";
                         
                         // 重新繪製彙總表以顯示 Admin 的動作編輯按鈕
                         renderMasterTable(state.items);
@@ -1676,11 +1666,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         display_name: "品質檢查員"
                     };
                     applyRoleMask("inspector");
-                    userProfile.style.display = "flex";
-                    txtUserDisplayName.textContent = state.user.display_name;
-                    txtUserRole.textContent = "Inspector";
-                    txtUserRole.className = "user-role-badge inspector";
-                    if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                     loginOverlay.classList.remove("active");
                     
                     // 重新渲染 Master Table，完全隱藏管理列
@@ -1697,11 +1682,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             display_name: "品質檢查員"
                         };
                         applyRoleMask("inspector");
-                        userProfile.style.display = "flex";
-                        txtUserDisplayName.textContent = state.user.display_name;
-                        txtUserRole.textContent = "Inspector";
-                        txtUserRole.className = "user-role-badge inspector";
-                        if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                         loginOverlay.classList.remove("active");
                         
                         // 重新渲染 Master Table，完全隱藏管理列

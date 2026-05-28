@@ -1,5 +1,23 @@
 # Development Log
 
+## 2026-05-28 - Hide Top-Right Profile Badge for Guest Inspector Role (v1.8.0 Adjustment)
+
+### Scope
+
+- **隱藏品質檢查員角色頭像/徽章**：將未登入（預設品質檢查員 `inspector` 角色）時的右上角頭像與角色徽章（`userProfile`）完全隱藏，僅在系統管理員 `admin` 登入成功後顯示，使品檢員的介面更加專注、清爽。
+
+### Today's Changes Summary
+
+1. **static/app.js (前台視角優化)**：
+   - 重構 `applyRoleMask` 函式：將右上角 `userProfile` 與管理員登入提示按鈕 `btnLoginPrompt` 的顯示/隱藏與文字/類別更新邏輯完美封裝至 `applyRoleMask` 集中控管。
+   - 當角色為 `admin` 時，`userProfile` 設定為 `display = "flex"` 並渲染管理員資訊；當角色為非管理員（如 `inspector`）時，`userProfile` 徹底設定為 `display = "none"`。
+   - 簡化 `checkAuthStatus`、`formLogin` 提交監聽器、以及 `btnLogout` 點擊監聽器，移除了其中重複的 `userProfile.style.display` 手動操作，實現高内聚、低耦合。
+
+### Verification Notes
+
+- 前台控制流高度簡化，經本機重載測試，預設未登入狀態下，右上角只會有「管理員登入」按鈕，無任何「品質檢查員 / INSPECTOR」徽章與頭像（圖標）。
+- 登入 `Admin123` 成功後，右上角正確呈現頭像、系統管理員文字及「Admin」徽章，登出後徽章完美隱藏並復原為「管理員登入」按鈕， Console 零錯誤。
+
 ## 2026-05-28 - Simplified RBAC and Server-side Public Folder Backup (v1.8.0)
 
 ### Scope
