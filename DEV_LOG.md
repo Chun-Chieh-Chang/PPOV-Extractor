@@ -122,3 +122,33 @@ QC 反應 `實際融膠溫度`、`產品充填重量`、`充填階段模重` 這
 * **Documentation**: System_Admin_Manual.html 已生成。
 * **Packaging**: setup_script.iss 已備妥。
 * **GitHub**: 相關文件已上傳至倉庫。
+
+### 🏆 終極里程碑：突破系統封鎖與架構定型 (v1.9.2 - 2026-05-28)
+
+#### 任務描述
+1. 解決打包後執行檔「啟動無反應」的隱形崩潰問題。
+2. 確保管理員密碼變更任務在無 Python 環境下永久生效。
+3. 同步產出「單一 EXE」與「正式安裝包」雙版本。
+
+#### 根本原因分析 (RCA) & 矯正預防措施 (CAPA)
+
+* **問題 1：程式啟動後完全沒反應且無報錯**
+    * **RCA**: 在公司受管電腦環境下，若執行檔設定為 Windowed 模式（無 Console 視窗），安全性軟體（如 AppLocker/WDAC）會將其視為惡意背景木馬而直接靜默殺除。
+    * **CAPA**: 
+        1. 強制還原為 Console=True 打包模式。
+        2. 證實了「黑色視窗」的存在是繞過公司安全性原則、確保伺服器進程存活的關鍵。
+        3. 透過 Console 視窗，管理員亦能即時看到伺服器狀態（如 Port 號與訪問網址）。
+
+* **問題 2：管理員密碼變更無法跨會話保留**
+    * **RCA**: 原架構將 users.json 打包在內部或放在唯讀的 Program Files 中。
+    * **CAPA**: 
+        1. 導入 get_data_dir() 邏輯，強行將寫入權限導向使用者的 %APPDATA%\PPOV-Extractor-Data。
+        2. 普通使用者權限即可完成密碼變更，無需請求 UAC 提權，徹底避開「要求的作業需要提升權限」之錯誤。
+
+#### 最終交付成果
+* **預設密碼**: Admin123 (代碼已加註解，說明書同步更新)。
+* **單一執行檔**: dist/PPOV-Extractor.exe (回歸最穩定之原始 .spec 配置)。
+* **專業安裝檔**: Output/PPOV-Extractor-Setup-v1.8.2.exe (內建 Console 版主程式)。
+
+#### ⚠️ 未來開發警告 (Developer Warning)
+切勿將 .spec 檔中的 console 改為 False，否則在具備 AppLocker 的環境中將會導致靜默啟動失敗。

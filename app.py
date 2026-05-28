@@ -12,56 +12,25 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 # 取得應用程式的基礎路徑（支援 PyInstaller 打包）
-
-
-
-import socket
-
-def find_free_port(start_port=5000):
-    port = start_port
-    while port < 6000:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(('127.0.0.1', port))
-                return port
-            except:
-                port += 1
-    return 0
-
-def get_resource_path():
+def get_base_path():
     if getattr(sys, 'frozen', False):
         return sys._MEIPASS
     return os.path.dirname(os.path.abspath(__file__))
 
-def get_data_dir():
-    if getattr(sys, 'frozen', False):
-        appdata = os.environ.get('APPDATA')
-        if not appdata:
-            appdata = os.path.expanduser('~')
-        data_path = os.path.join(appdata, 'PPOV-Extractor-Data')
-        if not os.path.exists(data_path):
-            os.makedirs(data_path, exist_ok=True)
-        return data_path
-    return os.path.dirname(os.path.abspath(__file__))
-
-RESOURCE_PATH = get_resource_path()
-DATA_DIR = get_data_dir()
-
-
-
+BASE_PATH = get_base_path()
 
 # Ensure workspace is in python path
-sys.path.append(RESOURCE_PATH)
+sys.path.append(BASE_PATH)
 from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dialog, _select_files_dialog
 
 app = Flask(__name__, 
-            static_folder=os.path.join(RESOURCE_PATH, 'static'),
-            template_folder=os.path.join(RESOURCE_PATH, 'templates'))
+            static_folder=os.path.join(BASE_PATH, 'static'),
+            template_folder=os.path.join(BASE_PATH, 'templates'))
 
 app.secret_key = "ppov_extractor_secret_key_123!"
 
 def load_users():
-    users_path = os.path.join(DATA_DIR, "users.json")
+    users_path = os.path.join(BASE_PATH, "users.json")
     if not os.path.exists(users_path):
         try:
             default_data = {
@@ -70,7 +39,7 @@ def load_users():
                         "username": "admin",
                         "role": "admin",
                         "display_name": "系統管理員",
-                        "password_hash": "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2" # Default: Admin123
+                        "password_hash": "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
                     }
                 ]
             }
@@ -176,7 +145,7 @@ def auth_change_password():
     current_hash = hashlib.sha256(current_password.encode("utf-8")).hexdigest()
     new_hash = hashlib.sha256(new_password.encode("utf-8")).hexdigest()
 
-    users_path = os.path.join(DATA_DIR, "users.json")
+    users_path = os.path.join(BASE_PATH, "users.json")
     try:
         with open(users_path, "r", encoding="utf-8") as f:
             users_data = json.load(f)
@@ -210,7 +179,7 @@ db = {
 }
 
 def get_db_file_path():
-    return os.path.join(DATA_DIR, "ppov_database.json")
+    return os.path.join(BASE_PATH, "ppov_database.json")
 
 def load_db_from_file():
     db_path = get_db_file_path()
@@ -235,7 +204,7 @@ def save_db_to_file():
         print(f"Error saving ppov_database.json: {e}")
 
 def load_config():
-    config_path = os.path.join(DATA_DIR, "config.json")
+    config_path = os.path.join(BASE_PATH, "config.json")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             db["config"] = json.load(f)
@@ -389,7 +358,7 @@ def db_import_single_pdf():
         filename = f.filename
         
         # 暫存於 output/ 目錄中以便進行實體路徑提取
-        temp_dir = os.path.join(DATA_DIR, "output")
+        temp_dir = os.path.join(BASE_PATH, "output")
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
             
@@ -445,7 +414,7 @@ def db_import_pdf_native():
         # 顯示原生檔案多選彈窗
         selected_files = _select_files_dialog(
             title="選擇 PPOV PDF 規格書檔案 (可多選)",
-            initial_dir=db["last_folder"] or DATA_DIR,
+            initial_dir=db["last_folder"] or BASE_PATH,
             file_types=[("PDF Files", "*.pdf")]
         )
         
@@ -601,7 +570,7 @@ def export_master():
     if not db["config"]:
         load_config()
     public_folder = db["config"].get("public_export_folder", "output/public")
-    abs_public_folder = os.path.abspath(os.path.join(DATA_DIR, public_folder))
+    abs_public_folder = os.path.abspath(os.path.join(BASE_PATH, public_folder))
     
     try:
         if not os.path.exists(abs_public_folder):
@@ -751,7 +720,9 @@ def export_part_excel():
     curr_row += 1
     
     proc_rows = [
+        ("實際融膠溫度 Melt Temp (℃)", "實際融膠溫度_目標值", "實際融膠溫度_下限值", "實際融膠溫度_上限值", "實際融膠溫度_實際值"),
         ("填充時間 Fill Time (s)", "填充時間_目標值", "填充時間_下限值", "填充時間_上限值", "填充時間_實際值"),
+        ("產品充填重量 Average Fill Weight (g)", "充填階段的產品平均重量_目標值", "充填階段的產品平均重量_下限值", "充填階段的產品平均重量_上限值", "充填階段的產品平均重量_實際值"),
         ("保壓壓力 Hold Pressure (bar)", "保壓壓力_目標值", "保壓壓力_下限值", "保壓壓力_上限值", "保壓壓力_實際值"),
         ("保壓時間 Hold Time (s)", "保壓時間_目標值", "保壓時間_下限值", "保壓時間_上限值", "保壓時間_實際值"),
         ("保壓完產品重量 Packed Weight (g)", "保壓完的產品平均重量_目標值", "保壓完的產品平均重量_下限值", "保壓完的產品平均重量_上限值", "保壓完的產品平均重量_實際值"),
@@ -791,6 +762,7 @@ def export_part_excel():
     curr_row += 1
     
     ref_fields = [
+        ("充填階段模重 Fill Only Shot Weight (g)", "充填階段的模重_目標值"),
         ("保壓完模重 Packed Out Shot Weight (g)", "保壓完的模重_目標值"),
         ("鎖模力設定 Clamp Tonnage (ton)", "鎖模力_目標值"),
         ("生產週期時間 Mold Cycle Time (s)", "週期時間_目標值")
@@ -959,5 +931,10 @@ def load_master_file():
 def launch_browser():
     webbrowser.open("http://127.0.0.1:5000")
 
-
-
+if __name__ == "__main__":
+    load_config()
+    # Start server and auto-launch default browser in a split second
+    # 防止 Flask 在 Debug Mode 下因為 Reloader 機制啟動兩次而開啟兩個網頁
+    if not os.environ.get("WERKZEUG_RUN_MAIN"):
+        Timer(1.0, launch_browser).start()
+    app.run(port=5000, debug=True)
