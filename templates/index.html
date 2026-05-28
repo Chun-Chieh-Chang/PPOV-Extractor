@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.7.1">
+    <link rel="stylesheet" href="static/style.css?v=1.8.0">
 </head>
 <body>
     <!-- 高級毛玻璃登入遮罩 UI (Premium Glassmorphic Login Overlay) -->
@@ -61,7 +61,7 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.7.1</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.8.0</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
@@ -392,8 +392,23 @@
             </div>
             <div class="modal-body">
                 <div class="timeline">
-                    <!-- v1.7.1 -->
+                    <!-- v1.8.0 -->
                     <div class="timeline-item current">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.8.0 - 精簡權限控管與公用備份版</span>
+                            <span class="timeline-date">2026-05-28</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-new">核心</span>免密碼品質檢查員模式：預設為品檢員角色，擁有載入、輸入、及匯出規格單權限。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>管理員密碼驗證：僅系統管理員需密碼登入即可解鎖全部 PDF 提取與 CRUD 修改權限。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>伺服器端公用備份：系統管理員導出總表時，自動同步備份一份至設定權限之公用資料夾內。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.7.1 -->
+                    <div class="timeline-item">
                         <div class="timeline-badge"></div>
                         <div class="timeline-title">
                             <span>v1.7.1 - 管理員密碼自助修改版</span>
@@ -743,6 +758,6 @@
         </div>
     </div>
 
-    <script src="static/app.js?v=1.7.1"></script>
+    <script src="static/app.js?v=1.8.0"></script>
 </body>
 </html>

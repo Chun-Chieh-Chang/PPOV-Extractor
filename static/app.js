@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
         isEditMode: false,
         sortKey: null,
         sortDirection: "asc", // "asc" or "desc"
-        user: null, // { username, role, display_name } (Phase D)
+        user: { username: "guest", role: "inspector", display_name: "品質檢查員" }, // 預設為免密碼品檢員 (Phase D)
     };
 
     // Environment detection for GitHub Pages or local static file
@@ -1499,14 +1499,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Phase D: Authentication and RBAC Logic ---
     async function checkAuthStatus() {
         if (isStaticMode) {
-            // 靜態模式：預設為 Operator 訪客身分，顯示管理員登入按鈕
+            // 靜態模式：預設為 Inspector 免密碼身分，顯示管理員登入按鈕
             state.user = {
-                role: "operator",
-                display_name: "現場查檢員"
+                role: "inspector",
+                display_name: "品質檢查員"
             };
-            applyRoleMask("operator");
+            applyRoleMask("inspector");
             loginOverlay.classList.remove("active");
-            userProfile.style.display = "none";
+            userProfile.style.display = "flex";
+            txtUserDisplayName.textContent = state.user.display_name;
+            txtUserRole.textContent = "Inspector";
+            txtUserRole.className = "user-role-badge inspector";
             if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
             
             initFetchDatabase();
@@ -1528,62 +1531,68 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 initFetchDatabase();
             } else {
-                // 預設登入為現場 Operator (免登入存取)
+                // 預設登入為現場品質檢查員 (免登入存取)
                 state.user = {
-                    role: "operator",
-                    display_name: "現場查檢員"
+                    role: "inspector",
+                    display_name: "品質檢查員"
                 };
-                applyRoleMask("operator");
+                applyRoleMask("inspector");
                 loginOverlay.classList.remove("active");
-                userProfile.style.display = "none";
+                userProfile.style.display = "flex";
+                txtUserDisplayName.textContent = state.user.display_name;
+                txtUserRole.textContent = "Inspector";
+                txtUserRole.className = "user-role-badge inspector";
                 if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                 
                 initFetchDatabase();
             }
         } catch (error) {
             console.error("Auth status check failed:", error);
-            // 發生異常時以安全 Operator 唯讀權限開啟
+            // 發生異常時以品質檢查員安全唯讀權限開啟
             state.user = {
-                role: "operator",
-                display_name: "現場查檢員"
+                role: "inspector",
+                display_name: "品質檢查員"
             };
-            applyRoleMask("operator");
+            applyRoleMask("inspector");
             loginOverlay.classList.remove("active");
-            userProfile.style.display = "none";
+            userProfile.style.display = "flex";
+            txtUserDisplayName.textContent = state.user.display_name;
+            txtUserRole.textContent = "Inspector";
+            txtUserRole.className = "user-role-badge inspector";
             if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
             initFetchDatabase();
         }
     }
 
     function applyRoleMask(role) {
-        if (role === "admin") {
-            // 還原所有管理按鈕
-            if (btnAddNewPart) btnAddNewPart.style.display = "inline-flex";
-            if (btnClearDatabase) btnClearDatabase.style.display = "inline-flex";
-            if (btnExportExcel) btnExportExcel.style.display = "inline-flex";
-            if (btnExportJson) btnExportJson.style.display = "inline-flex";
-            if (btnLoadMasterFile) btnLoadMasterFile.style.display = "inline-flex";
-            if (btnSelectFolder) btnSelectFolder.style.display = "inline-flex";
-            if (btnStartExtract) {
-                btnStartExtract.style.display = "inline-flex";
-                btnStartExtract.disabled = !state.folderPath;
-            }
-            
-            const thActions = document.querySelector(".table-actions-header");
-            if (thActions) thActions.style.display = "table-cell";
-        } else {
-            // 操作員：隱藏所有敏感管理按鈕與表格動作列
-            if (btnAddNewPart) btnAddNewPart.style.display = "none";
-            if (btnClearDatabase) btnClearDatabase.style.display = "none";
-            if (btnExportExcel) btnExportExcel.style.display = "none";
-            if (btnExportJson) btnExportJson.style.display = "none";
-            if (btnLoadMasterFile) btnLoadMasterFile.style.display = "none";
-            if (btnSelectFolder) btnSelectFolder.style.display = "none";
-            if (btnStartExtract) btnStartExtract.style.display = "none";
-            
-            const thActions = document.querySelector(".table-actions-header");
-            if (thActions) thActions.style.display = "none";
+        const isAdmin = role === "admin";
+        const isInspector = role === "inspector";
+
+        // Header controls
+        if (btnLoadMasterFile) btnLoadMasterFile.style.display = (isAdmin || isInspector) ? "inline-flex" : "none";
+        if (btnSelectFolder) btnSelectFolder.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnStartExtract) {
+            btnStartExtract.style.display = isAdmin ? "inline-flex" : "none";
+            btnStartExtract.disabled = !state.folderPath;
         }
+
+        // Database controls (left panel card actions)
+        if (btnAddNewPart) btnAddNewPart.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnClearDatabase) btnClearDatabase.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnExportExcel) btnExportExcel.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnExportJson) btnExportJson.style.display = isAdmin ? "inline-flex" : "none";
+
+        // Table header actions
+        const thActions = document.querySelector(".table-actions-header");
+        if (thActions) thActions.style.display = isAdmin ? "table-cell" : "none";
+
+        // Right panel spec sheet controls
+        if (btnInputInspection) btnInputInspection.style.display = (isAdmin || isInspector) ? "inline-flex" : "none";
+        if (btnExportPartSpec) btnExportPartSpec.style.display = (isAdmin || isInspector) ? "inline-flex" : "none";
+
+        // Profile buttons visibility based on admin role
+        if (btnChangePassword) btnChangePassword.style.display = isAdmin ? "inline-flex" : "none";
+        if (btnLogout) btnLogout.style.display = isAdmin ? "inline-flex" : "none";
     }
 
     function setupAuthEventListeners() {
@@ -1663,11 +1672,14 @@ document.addEventListener("DOMContentLoaded", () => {
             btnLogout.addEventListener("click", async () => {
                 if (isStaticMode) {
                     state.user = {
-                        role: "operator",
-                        display_name: "現場查檢員"
+                        role: "inspector",
+                        display_name: "品質檢查員"
                     };
-                    applyRoleMask("operator");
-                    userProfile.style.display = "none";
+                    applyRoleMask("inspector");
+                    userProfile.style.display = "flex";
+                    txtUserDisplayName.textContent = state.user.display_name;
+                    txtUserRole.textContent = "Inspector";
+                    txtUserRole.className = "user-role-badge inspector";
                     if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                     loginOverlay.classList.remove("active");
                     
@@ -1681,11 +1693,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     const result = await response.json();
                     if (result.success) {
                         state.user = {
-                            role: "operator",
-                            display_name: "現場查檢員"
+                            role: "inspector",
+                            display_name: "品質檢查員"
                         };
-                        applyRoleMask("operator");
-                        userProfile.style.display = "none";
+                        applyRoleMask("inspector");
+                        userProfile.style.display = "flex";
+                        txtUserDisplayName.textContent = state.user.display_name;
+                        txtUserRole.textContent = "Inspector";
+                        txtUserRole.className = "user-role-badge inspector";
                         if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                         loginOverlay.classList.remove("active");
                         

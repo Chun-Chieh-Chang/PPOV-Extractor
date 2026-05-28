@@ -1,5 +1,58 @@
 # Development Log
 
+## 2026-05-28 - Simplified RBAC and Server-side Public Folder Backup (v1.8.0)
+
+### Scope
+
+- **免密碼品質檢查員模式**：任何人進入網頁即免密碼、免登入，自動擁有品質檢查員（`inspector`）權限，執行載入總表、輸入實際值、及一鍵匯出單品 spec 表單。
+- **管理員密碼驗證 (Admin Elevation)**：僅有系統管理員（`admin`）需要輸入密碼（密碼：`Admin123`，安全雜湊加密存儲，無任何明文洩漏）即可解鎖 PDF 同步與 CRUD 修改等高級管理功能。
+- **伺服器端公用備份**：系統管理員匯出 Master Table 檔案時，系統會自動在伺服器端配置的公用資料夾中同步保存備份複本，供網路共享使用。
+
+### Today's Changes Summary
+
+1. **config.json**：新增設定 `"public_export_folder": "output/public"` 定義伺服器端公用目錄。
+2. **users.json**：動態生成邏輯（如果檔案缺失），安全存儲 `Admin123` 雜湊金鑰，完全杜絕原始密碼明文洩漏至代碼庫。
+3. **app.py (後端安全性)**：
+   - 更新 `/api/auth/status` 使未登入之 session 預設回傳 `inspector` 角色。
+   - 為所有高級管理、CRUD 刪修端點以及 `/api/export_master` 強制掛載 `@admin_required` 裝飾器。
+   - 移除 `/api/load_master_file` 之限制裝飾器，使品檢員能無密碼匯入總表。
+   - 在 `/api/export_master` 中引入公用備份邏輯，將生成的 Excel/JSON 寫入伺服器端指定路徑。
+4. **static/app.js (前端控制遮罩)**：
+   - 初始化 state 中 user 角色為 `inspector`。
+   - 重構 `applyRoleMask`：品檢員僅可見 `Load Master File`、`Input Inspection` 與 `Export Part Spec`；管理員登入後可見全部管理元件與 CRUD 表格編輯列。
+   - 登入與登出流程優化，在登出時無縫復原為 `inspector` 免密碼角色。
+5. **index.html & templates/index.html**：同步升級 timeline changelog 與引用版本號至 `v1.8.0`（緩存重新導向）。
+
+### Verification Notes
+
+- `node --check static\app.js` passed.
+- `python -m py_compile main.py app.py` passed.
+- 經由 Python urllib 發送驗證請求，證實預設未登入回傳角色為 `inspector`，登入後成功提升至 `admin`，並成功於 `output/public/` 中自動建立備份檔案。
+
+## 2026-05-28 - Branch Sync and Verification
+
+### Scope
+
+- **分支同步 (Branch Sync)**：從遠端同步並切換至最新開發分支 `feature/db-dashboard`，以追蹤最新之玻璃化規格數據庫與後台管理面版。
+- **專案結構檢查**：驗證本地工作區狀態，並確保符合最嚴格的 MECE 清理原則（工作區乾淨且無殘留暫存/備份）。
+- **重複啟動修正 (Browser Launch Fix)**：修復在 Flask Debug 模式下，因 Werkzeug 重載機制導致重複開啟兩個瀏覽器視窗/頁面的問題。
+
+### Today's Changes Summary
+
+1. **分支切換與同步**：
+   - 執行 `git fetch origin` 獲取遠端分支。
+   - 切換至本地 `feature/db-dashboard` 並追蹤 `origin/feature/db-dashboard`。
+   - 執行 `git pull` 確認工作目錄完全與遠端同步。
+2. **工作區狀態清理**：
+   - 透過 `git status` 與 `git restore` 確保無未提交之變更（確保工作區乾淨）。
+3. **app.py（伺服器重載優化）**：
+   - 在啟動瀏覽器的 `Timer` 前加入 `not os.environ.get("WERKZEUG_RUN_MAIN")` 判定，確保僅在 Flask 的主監控程序中執行一次瀏覽器開啟，完美避免重複開啟網頁。
+
+### Verification Notes
+
+- `git status` output: `On branch feature/db-dashboard, Your branch is up to date with 'origin/feature/db-dashboard', nothing to commit, working tree clean`.
+- 本地重新啟動後，只會精準開啟一個瀏覽器分頁。
+
 ## 2026-05-27 - Admin Password Change Feature (v1.7.1)
 
 ### Scope

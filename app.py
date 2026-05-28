@@ -31,6 +31,24 @@ app.secret_key = "ppov_extractor_secret_key_123!"
 
 def load_users():
     users_path = os.path.join(BASE_PATH, "users.json")
+    if not os.path.exists(users_path):
+        try:
+            default_data = {
+                "users": [
+                    {
+                        "username": "admin",
+                        "role": "admin",
+                        "display_name": "系統管理員",
+                        "password_hash": "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
+                    }
+                ]
+            }
+            with open(users_path, "w", encoding="utf-8") as f:
+                json.dump(default_data, f, ensure_ascii=False, indent=2)
+            print("Successfully initialized default users.json")
+        except Exception as e:
+            print(f"Error initializing default users.json: {e}")
+
     if os.path.exists(users_path):
         try:
             with open(users_path, "r", encoding="utf-8") as f:
@@ -98,7 +116,12 @@ def auth_status():
         })
     return jsonify({
         "success": True,
-        "logged_in": False
+        "logged_in": False,
+        "user": {
+            "username": "guest",
+            "role": "inspector",
+            "display_name": "品質檢查員"
+        }
     })
 
 @app.route("/api/auth/change_password", methods=["POST"])
@@ -532,6 +555,7 @@ def extract_data():
     })
 
 @app.route("/api/export_master", methods=["POST"])
+@admin_required
 def export_master():
     """Generates and exports the master Excel or JSON file in memory."""       
     format_type = request.json.get("format", "excel")
@@ -541,6 +565,28 @@ def export_master():
     df = pd.DataFrame(db["extracted_data"])
     column_order = ["檔案名稱"] + [field["name"] for field in db["config"]["fields_to_extract"]]
     df = df[column_order]
+
+    # Save a backup copy to the configured public folder on the server
+    if not db["config"]:
+        load_config()
+    public_folder = db["config"].get("public_export_folder", "output/public")
+    abs_public_folder = os.path.abspath(os.path.join(BASE_PATH, public_folder))
+    
+    try:
+        if not os.path.exists(abs_public_folder):
+            os.makedirs(abs_public_folder)
+        
+        backup_filename = "PPOV_Master_Table.xlsx" if format_type == "excel" else "PPOV_Master_Table.json"
+        backup_path = os.path.join(abs_public_folder, backup_filename)
+        
+        if format_type == "excel":
+            df.to_excel(backup_path, index=False, engine='openpyxl')
+        else:
+            with open(backup_path, "w", encoding="utf-8") as f:
+                json.dump(db["extracted_data"], f, ensure_ascii=False, indent=2)
+        print(f"Successfully saved server-side public backup to: {backup_path}")
+    except Exception as e:
+        print(f"Error saving public backup copy: {e}")
 
     if format_type == "excel":
         buffer = io.BytesIO()
@@ -826,7 +872,6 @@ def export_part_excel():
     )
 
 @app.route("/api/load_master_file", methods=["POST"])
-@admin_required
 def load_master_file():
     """接收瀏覽器上傳的 Excel 或 JSON 總表檔案，完全不依賴 tkinter。"""
     try:
@@ -883,5 +928,7 @@ def launch_browser():
 if __name__ == "__main__":
     load_config()
     # Start server and auto-launch default browser in a split second
-    Timer(1.0, launch_browser).start()
+    # 防止 Flask 在 Debug Mode 下因為 Reloader 機制啟動兩次而開啟兩個網頁
+    if not os.environ.get("WERKZEUG_RUN_MAIN"):
+        Timer(1.0, launch_browser).start()
     app.run(port=5000, debug=True)
