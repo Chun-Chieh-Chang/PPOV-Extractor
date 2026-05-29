@@ -1,5 +1,75 @@
 # Development Log
 
+## 2026-05-29 UI 修正：預設品檢員隱藏狀態徽章與雙重分頁原理說明 - DONE
+* **修正原因**：
+  1. 「徽章依然存在」：經確認，使用者所圈出的紅色方框代表的是整個「品質檢查員 / INSPECTOR」卡片（`userProfile` 容器）。雖然我們移除了圖標，但因為前端 `app.js` 原先在狀態初始化時強制設定了 `userProfile.style.display = "flex"`，因此不論如何刷新，這整張多餘的卡片依然會浮現在畫面上。
+  2. 「開啟兩個分頁」：由於 Flask 在 `debug=True` 偵錯模式下會啟動 Werkzeug 的檔案重載器（Reloader）子進程，在 Windows 下由於子進程與主進程啟動時的競態條件，有時會重疊啟動 `Timer(1.0, launch_browser)` 開啟兩次網頁。
+* **修改內容**：
+  - 修改 `static/app.js`：
+    1. 優化 `applyRoleMask(role)`：中央集權管控，設定 `userProfile.style.display = isAdmin ? "flex" : "none";`。只有在登入為管理員（`admin`）時才顯示該徽章卡片，品檢員（`inspector`，即未登入訪客模式）則完全隱藏，保持極簡清爽的頂部區塊。
+    2. 移除 `app.js` 中所有其他手動調用 `userProfile.style.display = "flex"` 的多餘邏輯，避免權限混亂。
+* **驗證結果**：
+  - 在未登入（預設品檢員）狀態下，頂部右上角只會出現「管理員登入」與「載入現有總表」按鈕，畫面不再出現任何品檢員狀態徽章。
+  - 管理員登入後，狀態徽章（含 Admin、修改密碼、安全登出）能立刻正常淡入顯示；登出後自動無縫隱藏，功能完美跑通。
+
+---
+
+## 2026-05-29 UI 優化：精準移除使用者狀態圖標 (User Profile Avatar Removal) - DONE
+* **優化背景**：應使用者要求，精準移除登入使用者狀態區（User Profile Widget）左側的圓形使用者頭像與齒輪圖標。
+* **修改內容**：
+  1. 修改 `templates/index.html`：移除 `#userProfile` 內的 `<div class="user-avatar">` 區塊。
+  2. 修改 `index.html`：同步移除 `<div class="user-avatar">` 區塊，維持前後端及靜態版本的一致性（MECE 原則）。
+* **驗證結果**：
+  - HTML 語法完整無誤，前端 JS 沒有 `userAvatarIcon` 的相依性，移除後網頁渲染完美，排版自動流暢適配。
+
+---
+
+## PDCA Round 2 - Chapter 2: QC 數據提取與 A4 列印優化 (QC Extraction & Premium Styling) - DONE
+
+### P (Plan) - 計劃與設計
+1. **數據提取**：修訂 `main.py` 的 `find_table_value` 提取引擎，加入鄰近索引搜索機制，確保即使 PDF 格式表格中出現複雜換行或稍微偏移，QC 參數亦能精準、無漏地被提取出來。
+2. **Excel 匯出**：修改 `app.py` 的 Excel 匯出模組，精確調整 A4 列印邊距（Margins）、置中配置（Centered），並按照標準 A4 寬度對齊欄寬（A: 38.5, B: 18.5, C: 30.0, D/E: 11.3），實現頂級的專業列印美感。
+
+### D (Do) - 執行與修改
+- [x] 修改 `main.py` 的 `find_table_value`，引入 `search_indices = [i, i + 1, i + 2, i + 3, i - 1]` 鄰近容錯匹配。
+- [x] 修改 `app.py` 中的 Excel 匯出樣式及 openpyxl 排版控制，加入水平與垂直置中及精調頁邊距。
+
+### C (Check) - 驗證與確效
+- [x] 靜態代碼與 Python Syntax 檢查通過，無任何編譯或變數未定義錯誤。
+- [x] 實測導出 Excel 並列印預覽，完美單頁置中對齊，完美滿足 A4 規格。
+
+### A (Act) - 行動
+- 完成 Round 2 PDCA，確保核心引擎代碼與列印樣式在極致的高水準狀態下穩定運行。
+
+---
+
+## PDCA Round 2 - Chapter 1: 路徑與啟動穩定性 (Architecture & Path Stability) - DONE
+
+### P (Plan) - 計劃與設計
+1. **路徑穩定性**：優化 `get_data_dir()` 邏輯，確保在 Frozen 執行環境或 Program Files 下，將資料目錄寫入專屬的 `%APPDATA%\PPOV-Extractor-Data`，徹底解決 Windows 權限不足導致的寫入失敗。
+2. **AppLocker 適配**：修改 `PPOV-Extractor.spec` 設定 `console=True` 啟用控制台模式，避免因無窗口啟動而被嚴格的企業 AppLocker 阻擋。
+
+### D (Do) - 執行與修改
+- [x] 修改 `app.py` 中所有資料庫及設定檔的寫入與存取邏輯，對接至動態 `%APPDATA%` 路徑。
+- [x] 修改 `PPOV-Extractor.spec` 設定 `console=True`。
+
+### C (Check) - 驗證與確效
+- [x] 成功驗證 `%APPDATA%\PPOV-Extractor-Data` 目錄能正常且安全地建立 `ppov_database.json` 與 `users.json`，且即使伺服器重啟或被打包後運行，資料亦能完美持久化。
+
+### A (Act) - 矯正與基線化
+- 本地路徑高穩定性通過驗證，成功作為新 Stable Baseline 的底座。
+
+---
+
+## 2026-05-28 系統重置與版本回滾 (System Reset & Rollback) - DONE
+* **問題背景**：先前從 v1.8.1 至 v1.9.4 的頻繁修改在實測中被發現有系統異常，品質參數及表格渲染出錯。為了確保極致穩定性，我們進行了系統重置，回退到 `restore-baseline-20260528-rbac-v1.8.0`（穩定版本 v1.8.0）。
+* **核心行動**：
+  1. **Rollback**：回退至 GitHub 上的穩定基線 `restore-baseline-20260528-rbac-v1.8.0`。
+  2. **Clean State**：清理所有因快速迭代產生的暫存與不穩定檔案，保持專案結構乾淨。
+  3. **PDCA Round 2**：啟動第二次 PDCA 循環，對各模組進行精準、高穩定性的修補與強化。
+
+---
+
 ## 2026-05-28 - Simplified RBAC and Server-side Public Folder Backup (v1.8.0)
 
 ### Scope

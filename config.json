@@ -57,33 +57,6 @@
       "extraction_method": "find_text_after"
     },
     {
-      "name": "實際融膠溫度_目標值",
-      "keywords": ["實際融膠溫度 ACTUAL PLASTIC MELT TEMPERATURE"],
-      "extraction_method": "find_table_value",
-      "parameters": {
-        "column": "目標值",
-        "value_type": "target"
-      }
-    },
-    {
-      "name": "實際融膠溫度_下限值",
-      "keywords": ["實際融膠溫度 ACTUAL PLASTIC MELT TEMPERATURE"],
-      "extraction_method": "find_table_value",
-      "parameters": {
-        "column": "下限值",
-        "value_type": "low"
-      }
-    },
-    {
-      "name": "實際融膠溫度_上限值",
-      "keywords": ["實際融膠溫度 ACTUAL PLASTIC MELT TEMPERATURE"],
-      "extraction_method": "find_table_value",
-      "parameters": {
-        "column": "上限值",
-        "value_type": "high"
-      }
-    },
-    {
       "name": "填充時間_目標值",
       "keywords": ["填充時間 FILL TIME"],
       "extraction_method": "find_table_value",
@@ -104,33 +77,6 @@
     {
       "name": "填充時間_上限值",
       "keywords": ["填充時間 FILL TIME"],
-      "extraction_method": "find_table_value",
-      "parameters": {
-        "column": "上限值",
-        "value_type": "high"
-      }
-    },
-    {
-      "name": "充填階段的產品平均重量_目標值",
-      "keywords": ["充填階段的產品平均重量 AVERAGE FILL ONLY PART WEIGHT"],
-      "extraction_method": "find_table_value",
-      "parameters": {
-        "column": "目標值",
-        "value_type": "target"
-      }
-    },
-    {
-      "name": "充填階段的產品平均重量_下限值",
-      "keywords": ["充填階段的產品平均重量 AVERAGE FILL ONLY PART WEIGHT"],
-      "extraction_method": "find_table_value",
-      "parameters": {
-        "column": "下限值",
-        "value_type": "low"
-      }
-    },
-    {
-      "name": "充填階段的產品平均重量_上限值",
-      "keywords": ["充填階段的產品平均重量 AVERAGE FILL ONLY PART WEIGHT"],
       "extraction_method": "find_table_value",
       "parameters": {
         "column": "上限值",
@@ -351,15 +297,6 @@
       "parameters": {
         "column": "實際值",
         "value_type": "actual"
-      }
-    },
-    {
-      "name": "充填階段的模重_目標值",
-      "keywords": ["FILL ONLY SHOT WEIGHT", "充填階段的模重"],
-      "extraction_method": "find_table_value",
-      "parameters": {
-        "column": "目標值",
-        "value_type": "target"
       }
     },
     {

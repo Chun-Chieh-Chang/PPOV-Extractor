@@ -18,6 +18,28 @@ def get_base_path():
     return os.path.dirname(os.path.abspath(__file__))
 
 BASE_PATH = get_base_path()
+def get_data_dir():
+    d = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'PPOV-Extractor-Data')
+    if not os.path.exists(d): os.makedirs(d)
+    return d
+DATA_DIR = get_data_dir()
+def save_atomic(file_path, data):
+    temp_path = file_path + ".tmp"
+    try:
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        # Validate temp file
+        with open(temp_path, "r", encoding="utf-8") as f:
+            json.load(f)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        os.rename(temp_path, file_path)
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise e
+
+
 
 # Ensure workspace is in python path
 sys.path.append(BASE_PATH)
@@ -30,39 +52,26 @@ app = Flask(__name__,
 app.secret_key = "ppov_extractor_secret_key_123!"
 
 def load_users():
-    users_path = os.path.join(BASE_PATH, "users.json")
+    users_path = os.path.join(DATA_DIR, "users.json")
+    ADMIN_FALLBACK = [{
+        "username": "admin", "role": "admin",
+        "display_name": "系統管理員",
+        "password_hash": "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
+    }]
     if not os.path.exists(users_path):
-        try:
-            default_data = {
-                "users": [
-                    {
-                        "username": "admin",
-                        "role": "admin",
-                        "display_name": "系統管理員",
-                        "password_hash": "3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2"
-                    }
-                ]
-            }
-            with open(users_path, "w", encoding="utf-8") as f:
-                json.dump(default_data, f, ensure_ascii=False, indent=2)
-            print("Successfully initialized default users.json")
-        except Exception as e:
-            print(f"Error initializing default users.json: {e}")
-
-    if os.path.exists(users_path):
-        try:
-            with open(users_path, "r", encoding="utf-8") as f:
-                return json.load(f).get("users", [])
-        except Exception as e:
-            print(f"Error loading users.json: {e}")
-    return []
+        try: save_atomic(users_path, {"users": ADMIN_FALLBACK})
+        except: pass
+    try:
+        with open(users_path, "r", encoding="utf-8") as f:
+            return json.load(f).get("users", ADMIN_FALLBACK)
+    except: return ADMIN_FALLBACK
 
 def admin_required(f):
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("role") != "admin":
-            return jsonify({"success": False, "message": "拒絕存取：您不具備管理員權限！"}), 403
+            return jsonify({"success": False, "message": "權限不足"}), 403
         return f(*args, **kwargs)
     return decorated_function
 
@@ -71,106 +80,37 @@ def auth_login():
     payload = request.json or {}
     username = payload.get("username", "").strip().lower()
     password = payload.get("password", "")
-    
-    if not username or not password:
-        return jsonify({"success": False, "message": "請輸入帳號與密碼"})
-        
-    password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    users = load_users()
-    
-    user = next((u for u in users if u["username"].lower() == username and u["password_hash"] == password_hash), None)
-    
-    if not user:
-        return jsonify({"success": False, "message": "帳號或密碼錯誤"})
-        
-    session["username"] = user["username"]
-    session["role"] = user["role"]
-    session["display_name"] = user["display_name"]
-    
-    return jsonify({
-        "success": True,
-        "message": "登入成功！",
-        "user": {
-            "username": user["username"],
-            "role": user["role"],
-            "display_name": user["display_name"]
-        }
-    })
+    if not username or not password: return jsonify({"success": False, "message": "請輸入帳號密碼"})
+    pw_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    user = next((u for u in load_users() if u["username"].lower() == username and u["password_hash"] == pw_hash), None)
+    if not user: return jsonify({"success": False, "message": "帳號或密碼錯誤"})
+    session["username"], session["role"], session["display_name"] = user["username"], user["role"], user["display_name"]
+    return jsonify({"success": True, "user": {"username": user["username"], "role": user["role"], "display_name": user["display_name"]}})
 
 @app.route("/api/auth/logout", methods=["POST"])
 def auth_logout():
     session.clear()
-    return jsonify({"success": True, "message": "已成功登出"})
+    return jsonify({"success": True})
 
 @app.route("/api/auth/status", methods=["GET"])
 def auth_status():
-    if "username" in session:
-        return jsonify({
-            "success": True,
-            "logged_in": True,
-            "user": {
-                "username": session["username"],
-                "role": session["role"],
-                "display_name": session["display_name"]
-            }
-        })
-    return jsonify({
-        "success": True,
-        "logged_in": False,
-        "user": {
-            "username": "guest",
-            "role": "inspector",
-            "display_name": "品質檢查員"
-        }
-    })
+    if "username" in session: return jsonify({"success": True, "logged_in": True, "user": {"username": session["username"], "role": session["role"], "display_name": session["display_name"]}})
+    return jsonify({"success": True, "logged_in": False, "user": {"username": "guest", "role": "inspector", "display_name": "訪客"}})
 
 @app.route("/api/auth/change_password", methods=["POST"])
 @admin_required
 def auth_change_password():
-    payload = request.json or {}
-    current_password = payload.get("current_password", "")
-    new_password = payload.get("new_password", "")
-    confirm_password = payload.get("confirm_password", "")
-
-    if not current_password or not new_password or not confirm_password:
-        return jsonify({"success": False, "message": "請填寫所有欄位"})
-
-    if new_password != confirm_password:
-        return jsonify({"success": False, "message": "新密碼與確認密碼不一致"})
-
-    if len(new_password) < 6:
-        return jsonify({"success": False, "message": "新密碼長度至少需要 6 個字元"})
-
-    username = session.get("username")
-    current_hash = hashlib.sha256(current_password.encode("utf-8")).hexdigest()
-    new_hash = hashlib.sha256(new_password.encode("utf-8")).hexdigest()
-
-    users_path = os.path.join(BASE_PATH, "users.json")
-    try:
-        with open(users_path, "r", encoding="utf-8") as f:
-            users_data = json.load(f)
-
-        user_found = False
-        for user in users_data.get("users", []):
-            if user["username"].lower() == username.lower():
-                if user["password_hash"] != current_hash:
-                    return jsonify({"success": False, "message": "目前密碼錯誤，請重新確認"})
-                user["password_hash"] = new_hash
-                user_found = True
-                break
-
-        if not user_found:
-            return jsonify({"success": False, "message": "找不到使用者資料"})
-
-        with open(users_path, "w", encoding="utf-8") as f:
-            json.dump(users_data, f, ensure_ascii=False, indent=2)
-
-        return jsonify({"success": True, "message": "密碼已成功更新！"})
-
-    except Exception as e:
-        print(f"Error changing password: {e}")
-        return jsonify({"success": False, "message": f"儲存失敗：{str(e)}"})
-
+    p = request.json or {}
+    curr_pw, new_pw, conf_pw = p.get("current_password", ""), p.get("new_password", ""), p.get("confirm_password", "")
+    if not curr_pw or not new_pw or new_pw != conf_pw: return jsonify({"success": False, "message": "輸入錯誤"})
+    users = load_users()
+    curr_hash = hashlib.sha256(curr_pw.encode("utf-8")).hexdigest()
+    target = next((u for u in users if u["username"].lower() == session.get("username").lower()), None)
+    if not target or target["password_hash"] != curr_hash: return jsonify({"success": False, "message": "原密碼錯誤"})
+    target["password_hash"] = hashlib.sha256(new_pw.encode("utf-8")).hexdigest()
+    try: save_atomic(os.path.join(DATA_DIR, "users.json"), {"users": users})
+    except Exception as e: return jsonify({"success": False, "message": str(e)})
+    return jsonify({"success": True, "message": "密碼已更新"})
 
 db = {
     "extracted_data": [],
@@ -179,7 +119,7 @@ db = {
 }
 
 def get_db_file_path():
-    return os.path.join(BASE_PATH, "ppov_database.json")
+    return os.path.join(DATA_DIR, "ppov_database.json")
 
 def load_db_from_file():
     db_path = get_db_file_path()
@@ -197,8 +137,7 @@ def load_db_from_file():
 def save_db_to_file():
     db_path = get_db_file_path()
     try:
-        with open(db_path, "w", encoding="utf-8") as f:
-            json.dump(db["extracted_data"], f, ensure_ascii=False, indent=2)
+        save_atomic(db_path, db["extracted_data"])
         print(f"Successfully saved {len(db['extracted_data'])} records to ppov_database.json")
     except Exception as e:
         print(f"Error saving ppov_database.json: {e}")
@@ -358,7 +297,7 @@ def db_import_single_pdf():
         filename = f.filename
         
         # 暫存於 output/ 目錄中以便進行實體路徑提取
-        temp_dir = os.path.join(BASE_PATH, "output")
+        temp_dir = os.path.join(DATA_DIR, "temp_import")
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
             
@@ -570,7 +509,7 @@ def export_master():
     if not db["config"]:
         load_config()
     public_folder = db["config"].get("public_export_folder", "output/public")
-    abs_public_folder = os.path.abspath(os.path.join(BASE_PATH, public_folder))
+    abs_public_folder = os.path.join(DATA_DIR, public_folder)
     
     try:
         if not os.path.exists(abs_public_folder):
@@ -720,9 +659,7 @@ def export_part_excel():
     curr_row += 1
     
     proc_rows = [
-        ("實際融膠溫度 Melt Temp (℃)", "實際融膠溫度_目標值", "實際融膠溫度_下限值", "實際融膠溫度_上限值", "實際融膠溫度_實際值"),
         ("填充時間 Fill Time (s)", "填充時間_目標值", "填充時間_下限值", "填充時間_上限值", "填充時間_實際值"),
-        ("產品充填重量 Average Fill Weight (g)", "充填階段的產品平均重量_目標值", "充填階段的產品平均重量_下限值", "充填階段的產品平均重量_上限值", "充填階段的產品平均重量_實際值"),
         ("保壓壓力 Hold Pressure (bar)", "保壓壓力_目標值", "保壓壓力_下限值", "保壓壓力_上限值", "保壓壓力_實際值"),
         ("保壓時間 Hold Time (s)", "保壓時間_目標值", "保壓時間_下限值", "保壓時間_上限值", "保壓時間_實際值"),
         ("保壓完產品重量 Packed Weight (g)", "保壓完的產品平均重量_目標值", "保壓完的產品平均重量_下限值", "保壓完的產品平均重量_上限值", "保壓完的產品平均重量_實際值"),
@@ -762,7 +699,6 @@ def export_part_excel():
     curr_row += 1
     
     ref_fields = [
-        ("充填階段模重 Fill Only Shot Weight (g)", "充填階段的模重_目標值"),
         ("保壓完模重 Packed Out Shot Weight (g)", "保壓完的模重_目標值"),
         ("鎖模力設定 Clamp Tonnage (ton)", "鎖模力_目標值"),
         ("生產週期時間 Mold Cycle Time (s)", "週期時間_目標值")
@@ -835,11 +771,11 @@ def export_part_excel():
     author_cell.alignment = Alignment(horizontal="right", vertical="center")
     
     # Set optimized print-safe column widths (Total: 78, perfectly fits A4 portrait width)
-    ws.column_dimensions['A'].width = 30  # Parameter Label
-    ws.column_dimensions['B'].width = 12  # Target Value
-    ws.column_dimensions['C'].width = 12  # Low Value
-    ws.column_dimensions['D'].width = 12  # High Value
-    ws.column_dimensions['E'].width = 12  # Actual Value/Check Record
+    ws.column_dimensions['A'].width = 38.5  # Parameter Label
+    ws.column_dimensions['B'].width = 18.5  # Target Value
+    ws.column_dimensions['C'].width = 30.0  # Low Value
+    ws.column_dimensions['D'].width = 11.3  # High Value
+    ws.column_dimensions['E'].width = 11.3  # Actual Value/Check Record
     
     # ─── ROW HEIGHTS (Only active rows with content, preventing trailing page overflows) ───
     ws.row_dimensions[1].height = 40
@@ -853,13 +789,15 @@ def export_part_excel():
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 1
     ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.horizontalCentered = True
+    ws.page_setup.verticalCentered = True
     ws.print_area = f'A1:E{curr_row}'  # Explicitly restrict print area
     
     # Set elegant margins (0.5 inch / 1.2 cm)
-    ws.page_margins.left = 0.5
-    ws.page_margins.right = 0.5
-    ws.page_margins.top = 0.5
-    ws.page_margins.bottom = 0.5
+    ws.page_margins.left = 0.51
+    ws.page_margins.right = 0.51
+    ws.page_margins.top = 0.31
+    ws.page_margins.bottom = 0.31
         
     buffer = io.BytesIO()
     wb.save(buffer)

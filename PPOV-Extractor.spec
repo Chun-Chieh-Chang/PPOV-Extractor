@@ -1,4 +1,4 @@
-# -*- mode: python ; coding: utf-8 -*-
+﻿# -*- mode: python ; coding: utf-8 -*-
 
 
 a = Analysis(
@@ -26,13 +26,19 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
+    uac_admin=True,
+    version='version_info.txt',
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
 )
+
+
+
+

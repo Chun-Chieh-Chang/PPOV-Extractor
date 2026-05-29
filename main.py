@@ -91,95 +91,69 @@ def find_nested_value(text, keywords, parameters):
 
 def find_table_value(text, keywords, parameters):
     """
-    處理表格數據提取，專門用於提取關鍵參數表格中的值。
-    根據參數中的 value_type 來決定提取目標值、下限值還是上限值。
+    Extracts table values (Target, Low, High, Actual) with extreme resilience.
+    Uses a priority-based scanning window [i, i+1, i-1, i+2, i-2, i+3] and specific 
+    handling for single-value parameters to avoid row-crossing errors.
     """
     value_type = parameters.get("value_type", "target")
-    checked_unit = parameters.get("checked_unit", "kg/cm²")
     
     for keyword in keywords:
-        # 找到關鍵字行的位置
         lines = text.split('\n')
         for i, line in enumerate(lines):
             if keyword in line:
-                # 為了避免模重等單一數值行與鄰近的多數值行或標題行發生錯位交叉，
-                # 我們根據 keywords 匹配情況和當前行特性進行精準搜尋。
+                # Priority Scanning Window: [i, i+1, i-1, i+2, i-2, i+3]
+                search_indices = [i, i + 1, i - 1, i + 2, i - 2, i + 3]
                 
-                # 如果是多欄位提取，尋找包含至少三個有效 token 的行
-                # 通常數值會在接下來的 1-3 行內
-                for j in range(i, min(i + 4, len(lines))):
+                # Parameters that usually have only one value (not a full Target/Low/High row)
+                is_single_param = any(s in keyword.upper() for s in ["CYCLE", "TONNAGE", "SCREW DIA", "MOLD CYCLE"])
+                
+                # Phase 1: Look for multi-token rows (Table Data)
+                for j in search_indices:
+                    if j < 0 or j >= len(lines): continue
                     current_line = lines[j]
-                    tokens = re.findall(r'\b\d+\.?\d*\b|NCA|N/A', current_line, re.IGNORECASE)
                     
-                    # 特殊處理：如果有6個tokens（如保壓壓力有Bar/kg/cm²雙單位）
-                    # X/Y 兩個數值都顯示
+                    # Extract numeric tokens and common placeholders
+                    tokens = re.findall(r'\b\d+\.?\d*\b|NCA|N/A', current_line, re.IGNORECASE)
+
+                    # Handle special slash formats (e.g., "10 / 20 / 30")
                     if len(tokens) == 6 and '/' in current_line:
                         tokens = [
                             f"{tokens[0]} / {tokens[1]}",
                             f"{tokens[2]} / {tokens[3]}",
                             f"{tokens[4]} / {tokens[5]}"
                         ]
-                    
-                    if len(tokens) >= 3:
-                        if value_type == "target":
-                            return tokens[0]
-                        elif value_type == "low":
-                            return tokens[1]
-                        elif value_type == "high":
-                            return tokens[2]
-                        elif value_type == "actual":
-                            return tokens[3] if len(tokens) > 3 else "未找到"
-                
-                # 如果是參考參數等單一數值提取（例如模重、鎖模力、週期時間）
-                # 這些數值只有目標值，且通常單獨成行 (只有一個數字或小數)
+
+                    # If we find 3+ tokens, it's likely a structured table row
+                    if len(tokens) >= 3 and not is_single_param:
+                        if value_type == "target": return tokens[0]
+                        elif value_type == "low": return tokens[1]
+                        elif value_type == "high": return tokens[2]
+                        elif value_type == "actual": return tokens[3] if len(tokens) > 3 else "?芣??"
+
+                # Phase 2: Fallback for single-value parameters (like Mold Cycle Time)
+                # This ensures we don't pick up a value from a neighboring table row.
                 if value_type == "target":
-                    # 1. 優先檢查相鄰行（i-1, i+1, i-2, i+2）是否為純數字/NCA/N/A
-                    for offset in [-1, 1, -2, 2]:
-                        target_idx = i + offset
-                        if 0 <= target_idx < len(lines):
-                            candidate_line = lines[target_idx].strip()
-                            # 檢查是否為純數字或 NCA/NA
-                            tokens = re.findall(r'^(\d+\.?\d*|NCA|N/A)$', candidate_line, re.IGNORECASE)
-                            if tokens:
+                    for j in search_indices:
+                        if j < 0 or j >= len(lines): continue
+                        current_line = lines[j].strip()
+                        
+                        # Case A: Keyword and token(s) on the same line
+                        if keyword in lines[j]:
+                            k_pos = lines[j].find(keyword)
+                            after_k = lines[j][k_pos+len(keyword):].strip()
+                            # Try to find the first token immediately following the keyword
+                            match = re.search(r'\b(\d+\.?\d*|NCA|N/A)\b', after_k, re.IGNORECASE)
+                            if match: return match.group(1)
+                        
+                        # Case B: Line contains exactly one token (and no other conflicting keywords)
+                        tokens = re.findall(r'\b(\d+\.?\d*|NCA|N/A)\b', current_line, re.IGNORECASE)
+                        if len(tokens) == 1:
+                            # Avoid picking up tokens that belong to other process parameters
+                            conflicts = ["FILL", "SHOT", "PACKED", "CLAMP", "TONNAGE", "CYCLE", "MOLD"]
+                            if not any(c in current_line.upper() for c in conflicts if c not in keyword.upper()):
                                 return tokens[0]
-                    
-                    # 2. 如果沒找到純數值的單獨行，向下搜尋最近的只有一個數字/小數的行（不包含其他關鍵字字眼如 FILL, PACKED, CLAMP, MOLD）
-                    for j in range(i + 1, min(i + 5, len(lines))):
-                        current_line = lines[j].strip()
-                        # 檢查是否含有單一數字或 NCA/NA 字符
-                        tokens = re.findall(r'\b(\d+\.?\d*|NCA|N/A)\b', current_line, re.IGNORECASE)
-                        if len(tokens) == 1 and not any(kw in current_line.upper() for kw in ["FILL", "SHOT", "PACKED", "CLAMP", "TONNAGE", "CYCLE", "MOLD"]):
-                            return tokens[0]
-                            
-                    # 3. 向上搜尋最近的只有一個數字/小數的行
-                    for j in range(max(0, i - 4), i):
-                        current_line = lines[j].strip()
-                        tokens = re.findall(r'\b(\d+\.?\d*|NCA|N/A)\b', current_line, re.IGNORECASE)
-                        if len(tokens) == 1 and not any(kw in current_line.upper() for kw in ["FILL", "SHOT", "PACKED", "CLAMP", "TONNAGE", "CYCLE", "MOLD"]):
-                            return tokens[0]
 
-                    # 後備：如果沒找到單一數字行，在 [i+1, i+2] 行中直接抓取第一個數字
-                    for j in range(i + 1, min(i + 3, len(lines))):
-                        current_line = lines[j].strip()
-                        tokens = re.findall(r'\b\d+\.?\d*\b', current_line)
-                        if tokens:
-                            return tokens[0]
-                    
-                    # 後備：在 [i-2, i-1] 行中直接抓取第一個數字
-                    for j in range(max(0, i - 2), i):
-                        current_line = lines[j].strip()
-                        tokens = re.findall(r'\b\d+\.?\d*\b', current_line)
-                        if tokens:
-                            return tokens[0]
-
-                    # 後備的後備：原行或鄰近行
-                    for j in range(max(0, i - 2), min(i + 3, len(lines))):
-                        current_line = lines[j]
-                        tokens = re.findall(r'\b\d+\.?\d*\b', current_line)
-                        if tokens:
-                            return tokens[0]
-                            
-    return "未找到"
+    return "?芣??" 
 
 def find_material_number(text, keywords):
     """
