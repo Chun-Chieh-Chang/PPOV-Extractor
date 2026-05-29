@@ -1,4 +1,4 @@
-﻿; PPOV Extractor - Inno Setup Script
+; PPOV Extractor - Inno Setup Script
 ; Version: 1.9.4
 
 [Setup]
@@ -18,6 +18,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "C:\Users\USER\Downloads\PPOV-Extractor\dist\PPOV-Extractor.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\USER\Downloads\PPOV-Extractor\docs\System_Admin_Manual.html"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "C:\Users\USER\Downloads\PPOV-Extractor\docs\Password_Management.html"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\PPOV Extractor"; Filename: "{app}\PPOV-Extractor.exe"

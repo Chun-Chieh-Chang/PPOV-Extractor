@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPOV Extractor 系統管理手冊</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #f9fafb;
+            --bg-surface: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --color-brand: #3b82f6;
+            --color-brand-hover: #2563eb;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-error: #ef4444;
+            --border-color: #e5e7eb;
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-title: 'Outfit', sans-serif;
+            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 8px -1px rgba(0, 0, 0, 0.03);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-base: #0f172a;
+                --bg-surface: #1e293b;
+                --text-primary: #f1f5f9;
+                --text-secondary: #94a3b8;
+                --color-brand: #60a5fa;
+                --color-brand-hover: #93c5fd;
+                --color-success: #34d399;
+                --border-color: #334155;
+                --card-shadow: 0 4px 24px -3px rgba(0, 0, 0, 0.3), 0 2px 10px -2px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Header Style */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            font-family: var(--font-title);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--color-brand), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header .meta {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Navigation or TOC */
+        .toc-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 40px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .toc-card h3 {
+            font-family: var(--font-title);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .toc-list a {
+            color: var(--color-brand);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .toc-list a:hover {
+            color: var(--text-primary);
+            text-decoration: underline;
+        }
+
+        /* Article Sections */
+        section {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: var(--card-shadow);
+        }
+
+        section h2 {
+            font-family: var(--font-title);
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--color-brand);
+            display: inline-block;
+        }
+
+        section h3 {
+            font-family: var(--font-title);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        ul, ol {
+            margin-left: 24px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Code Block & Callout Alert Styling */
+        code {
+            background-color: rgba(59, 130, 246, 0.08);
+            color: var(--color-brand);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        pre {
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 20px;
+            border-radius: var(--radius-md);
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid #1e293b;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: var(--radius-md);
+            margin: 24px 0;
+            font-size: 0.95rem;
+        }
+
+        .alert-info {
+            background-color: rgba(59, 130, 246, 0.08);
+            border-left: 5px solid var(--color-brand);
+            color: var(--text-primary);
+        }
+
+        .alert-warning {
+            background-color: rgba(245, 158, 11, 0.08);
+            border-left: 5px solid var(--color-warning);
+            color: var(--text-primary);
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: rgba(59, 130, 246, 0.05);
+            font-family: var(--font-title);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Footer Style */
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 10px;
+            }
+
+            section {
+                padding: 24px 16px;
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PPOV Extractor 系統管理手冊</h1>
+            <div class="meta">文件版本: v1.9.4 | 最後更新: 2026-05-29 | 發布單位: Mouldex</div>
+        </header>
+
+        <div class="toc-card">
+            <h3>目錄索引</h3>
+            <ul class="toc-list">
+                <li><a href="#intro">1. 系統架構簡介</a></li>
+                <li><a href="#deploy">2. 部署架構與路徑規範</a></li>
+                <li><a href="#security">3. 帳戶權限與密碼安全</a></li>
+                <li><a href="#trouble">4. 運行防護與疑難排解</a></li>
+            </ul>
+        </div>
+
+        <section id="intro">
+            <h2>1. 系統架構簡介</h2>
+            <p><strong>PPOV Extractor</strong> 是一套專為 Mouldex 模具技術與品質保證設計的自動化數據提取及玻璃化規格數據庫平台。系統核心採用本地服務器架構設計，能大幅簡化現場品質查檢流程。</p>
+            <div class="alert alert-info">
+                <strong>系統組成：</strong><br>
+                - <strong>後端服務器 (Backend Server)</strong>：基於輕量化 Python Flask 提供製程參數 PDF 實體提取引擎及數據庫 API 操作。<br>
+                - <strong>前端使用者介面 (Frontend UI)</strong>：基於精美莫蘭迪呼吸感玻璃化網頁，支援全響應式多設備操作。<br>
+                - <strong>打包封裝 (Frozen Binary)</strong>：使用 PyInstaller 結合 Inno Setup 進行一鍵化桌面程式安裝。
+            </div>
+        </section>
+
+        <section id="deploy">
+            <h2>2. 部署架構與路徑規範</h2>
+            <p>為了解決 Windows 環境下嚴格的資料夾寫入權限問題，系統實施了最嚴謹的<strong>「資源與資料分離」</strong>原則：</p>
+            
+            <h3>2.1 靜態主程式目錄</h3>
+            <p>當您執行安裝包安裝後，主程式預設安裝於系統資料夾中：</p>
+            <ul>
+                <li>預設路徑：<code>C:\Program Files (x86)\PPOV Extractor\</code> 或 <code>C:\Program Files\PPOV Extractor\</code></li>
+                <li>安裝目錄包含核心執行檔 <code>PPOV-Extractor.exe</code> 及 <code>docs/</code> 文件夾，此區塊為唯讀保護區，可完美避開非管理員權限遭竄改的風險。</li>
+            </ul>
+
+            <h3>2.2 動態持久化資料目錄</h3>
+            <p>所有需要頻繁寫入與更新的設定、資料庫檔案均統一指向 Windows 用戶專屬的 AppData 漫遊目錄：</p>
+            <ul>
+                <li>動態路徑：<code>%APPDATA%\PPOV-Extractor-Data\</code> （實際路徑通常為 <code>C:\Users\&lt;使用者名稱&gt;\AppData\Roaming\PPOV-Extractor-Data\</code>）</li>
+            </ul>
+            <p>該目錄下包含以下核心檔案：</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">檔案名稱</th>
+                        <th style="width: 30%;">存儲內容</th>
+                        <th>Git/備份 政策</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>ppov_database.json</code></td>
+                        <td>存放所有解析並合併後的玻璃化製程規格數據。</td>
+                        <td>重要資料！建議定期備份，卸載軟體時預設保留。</td>
+                    </tr>
+                    <tr>
+                        <td><code>users.json</code></td>
+                        <td>存放管理員的帳號名稱、角色配置以及安全雜湊密碼。</td>
+                        <td>機密檔案！請勿隨意移動，且避免明文洩漏。</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="alert alert-warning">
+                <strong>特別注意：</strong> 卸載軟體或重新安裝新版本時，系統安裝程式<strong>不會刪除</strong> <code>%APPDATA%\PPOV-Extractor-Data\</code> 目錄，以確保您的歷史數據與修改過的安全密碼 100% 不會丟失。
+            </div>
+        </section>
+
+        <section id="security">
+            <h2>3. 帳戶權限與密碼安全</h2>
+            <p>系統內建嚴格的<strong>角色型存取控制 (RBAC)</strong>，區分為兩種操作權限層級：</p>
+            
+            <h3>3.1 品質檢查員模式 (Guest Mode / Inspector)</h3>
+            <ul>
+                <li><strong>免密碼驗證</strong>：現場工作人員開啟網頁即預設登入品檢員身分，不需輸入任何密碼，防止密碼於現場終端洩露。</li>
+                <li><strong>核心權限</strong>：支援載入現有 Master 規格總表、手動輸入實際檢驗值、以及一鍵匯出符合 A4 規格的「單品 Spec 規格檢驗單」。</li>
+                <li><strong>視覺優化</strong>：為保持現場畫面的清爽度，品檢員模式下右上角的狀態徽章預設完全隱藏，不影響查檢操作。</li>
+            </ul>
+
+            <h3>3.2 系統管理員模式 (Admin Mode)</h3>
+            <ul>
+                <li><strong>高權限保護</strong>：管理員需點擊右上角登入並輸入安全密碼。</li>
+                <li><strong>解鎖功能</strong>：登入後即可操作 PDF 單檔/資料夾自動同步、規格 CRUD 修改、資料庫清空，以及匯出 Master Excel 總表等管理端點。</li>
+                <li><strong>預設初始密碼</strong>：<code>Admin123</code> （區分大小寫）。</li>
+            </ul>
+            <div class="alert alert-info">
+                <strong>密碼安全保護：</strong> 後端對密碼使用不可逆的 <code>SHA-256</code> 進行安全雜湊儲存。詳細密碼修改指引請參閱同目錄下的 <code>Password_Management.html</code> 文件。
+            </div>
+        </section>
+
+        <section id="trouble">
+            <h2>4. 運行防護與疑難排解</h2>
+            
+            <h3>4.1 為什麼程式啟動時會出現命令提示字元 (Console) 視窗？</h3>
+            <p>在許多大型工業製造企業（如 Mouldex 內網），Windows 的安全機制與 AppLocker 軟體限制策略非常嚴格。如果將 Python Flask 打包為無視窗後台執行檔，常會因缺乏背景證書或非交互行為被 AppLocker 誤判為威脅進程而強制中斷封鎖。</p>
+            <p><strong>解決方案：</strong> 我們在 PyInstaller 打包配置中開啟了 <code>console=True</code> 模式。這將使系統被安全防護軟體判定為標準的「控制台診斷工具」，能 100% 避開 Windows 阻擋，確保主程式能穩定啟動運作。請在執行時讓該命令視窗在背景運行，切勿手動關閉，關閉該視窗將導致 Flask 後端服務器停止。</p>
+
+            <h3>4.2 主程式重啟與瀏覽器防雙開機制</h3>
+            <p>系統在啟動時，會自動檢測本地可用 Port，並利用 Timer 延時開啟瀏覽器。系統已內建防雙開機制，能有效杜絕 Flask 重載器子進程重複開啟兩個網頁分頁的情況，確保資源的最高效利用。</p>
+
+            <h3>4.3 數據備份與手動還原</h3>
+            <p>如果您需要將資料庫遷移至另一台檢驗終端：</p>
+            <ol>
+                <li>在原終端機輸入路徑 <code>%APPDATA%\PPOV-Extractor-Data\</code> 並按 Enter 打開目錄。</li>
+                <li>複製 <code>ppov_database.json</code> 檔案。</li>
+                <li>將該檔案複製到新終端機的相同資料夾目錄中，重啟主程式即可無縫完成規格移轉。</li>
+            </ol>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Mouldex 模具技術有限公司. 保留所有權利。</p>
+        </footer>
+    </div>
+</body>
+</html>

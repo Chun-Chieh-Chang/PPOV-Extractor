@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <!-- Custom Style Sheet (Relative for GitHub Pages compatibility) -->
-    <link rel="stylesheet" href="static/style.css?v=1.8.0">
+    <link rel="stylesheet" href="static/style.css?v=1.9.4">
 </head>
 <body>
     <!-- 高級毛玻璃登入遮罩 UI (Premium Glassmorphic Login Overlay) -->
@@ -61,7 +61,7 @@
         <div class="header-logo">
             <i class="fa-solid fa-microchip-heading logo-icon"></i>
             <div>
-                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.8.0</span></h1>
+                <h1>PPOV <span>Molding Extractor</span> <span class="version-badge" id="btnVersion">v1.9.4</span></h1>
                 <p>數位射出成型報告解析與規格單總表管理系統</p>
             </div>
         </div>
@@ -376,8 +376,25 @@
             </div>
             <div class="modal-body">
                 <div class="timeline">
-                    <!-- v1.8.0 -->
+                    <!-- v1.9.4 -->
                     <div class="timeline-item current">
+                        <div class="timeline-badge"></div>
+                        <div class="timeline-title">
+                            <span>v1.9.4 - 極致穩定與極簡產線版</span>
+                            <span class="timeline-date">2026-05-29</span>
+                        </div>
+                        <div class="timeline-body">
+                            <ul>
+                                <li><span class="timeline-tag tag-opt">優化</span>欄位精簡裁剪：從 UI 及 Excel 匯出中裁剪實際融膠溫度、產品充填重量及充填階段模重參數，聚焦核心指標。</li>
+                                <li><span class="timeline-tag tag-new">新增</span>品檢員極簡介面：品質檢查員（訪客）模式下預設完全隱藏狀態徽章，畫面極致簡約。</li>
+                                <li><span class="timeline-tag tag-fix">修復</span>瀏覽器防雙開：修正 Flask debug 重載子進程競爭導致重複開啟兩個網頁之問題。</li>
+                                <li><span class="timeline-tag tag-opt">優化</span>A4 列印標準：重新調校規格表 Excel 的列印頁邊距與欄寬，完美實現 A4 置中列印。</li>
+                                <li><span class="timeline-tag tag-sec">安全</span>企業防禦部署：主程式配置動態資料庫資料夾與 Console 啟動，100% 避開企業內網 AppLocker/SmartScreen 攔截。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- v1.8.0 -->
+                    <div class="timeline-item">
                         <div class="timeline-badge"></div>
                         <div class="timeline-title">
                             <span>v1.8.0 - 精簡權限控管與公用備份版</span>
@@ -726,6 +743,6 @@
         </div>
     </div>
 
-    <script src="static/app.js?v=1.8.0"></script>
+    <script src="static/app.js?v=1.9.4"></script>
 </body>
 </html>
