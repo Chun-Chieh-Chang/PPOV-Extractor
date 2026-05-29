@@ -886,6 +886,10 @@ def wait_and_launch_browser(port):
 
 if __name__ == "__main__":
     load_config()
+    # 啟動時自動清空本地資料庫，確保產線開啟時為乾淨起點，引導用戶自主載入最新總表
+    db["extracted_data"] = []
+    save_db_to_file()
+
     port = 5000
 
     # 1. 檢查埠位是否已被另一個正在運行的實例佔用
