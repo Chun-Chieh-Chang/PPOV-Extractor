@@ -1,4 +1,4 @@
-﻿# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
 
 
 a = Analysis(
@@ -30,7 +30,7 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
-    uac_admin=True,
+    uac_admin=False,
     version='version_info.txt',
     disable_windowed_traceback=False,
     argv_emulation=False,
