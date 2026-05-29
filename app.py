@@ -860,13 +860,43 @@ def load_master_file():
 
 
 
-def launch_browser():
-    webbrowser.open("http://127.0.0.1:5000")
+def is_port_in_use(port):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+            return False
+        except OSError:
+            return True
+
+def wait_and_launch_browser(port):
+    import time
+    import socket
+    # 輪詢埠位，直到本地服務器成功 Bind 並有響應才開網頁
+    for _ in range(50):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.1)
+                if s.connect_ex(("127.0.0.1", port)) == 0:
+                    webbrowser.open(f"http://127.0.0.1:{port}")
+                    return
+        except Exception:
+            pass
+        time.sleep(0.1)
 
 if __name__ == "__main__":
     load_config()
-    # Start server and auto-launch default browser in a split second
-    # 防止 Flask 在 Debug Mode 下因為 Reloader 機制啟動兩次而開啟兩個網頁
-    if not os.environ.get("WERKZEUG_RUN_MAIN"):
-        Timer(1.0, launch_browser).start()
-    app.run(port=5000, debug=True)
+    port = 5000
+
+    # 1. 檢查埠位是否已被另一個正在運行的實例佔用
+    if is_port_in_use(port):
+        print(f"PPOV Extractor 服務已在運行中。正在引導至網頁頁面...")
+        webbrowser.open(f"http://127.0.0.1:{port}")
+        sys.exit(0)
+
+    # 2. 若埠位空閒，啟動背景線程感應服務 bind 狀態後才開啟網頁
+    import threading
+    threading.Thread(target=wait_and_launch_browser, args=(port,), daemon=True).start()
+
+    # 3. 啟動 Flask 本地服務，禁用 use_reloader
+    app.run(port=port, debug=True, use_reloader=False)
