@@ -34,3 +34,28 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Node Modules & Local Agent Folders
+node_modules/
+.gemini/antigravity/scratch/
+.gemini/antigravity/recordings/
+
+# Graphify Local Graph Output
+graphify-out/
+graph.json
+
+# SkillsBuilder Temporary Clone
+SkillsBuilder_temp/
+
+# FreeFileSync Database
+sync.ffs_db
+
+# Local IDE/Plugin Folders
+.claude-plugin/
+.codex-plugin/
+.cursor-plugin/
+.continue/
+.kiro/
+.opencode/
+.qoder/
+.trae/

@@ -275,6 +275,48 @@ def _select_directory_dialog(title: str, initial_dir: str = None) -> str:
     """顯示資料夾選擇彈窗，返回使用者選擇的資料夾路徑；取消則返回空字串。"""
     import subprocess
     import sys
+    import os
+
+    is_frozen = getattr(sys, 'frozen', False)
+
+    if sys.platform == "win32":
+        try:
+            init_dir_arg = f"$d.SelectedPath = {repr(initial_dir)};" if initial_dir and os.path.exists(initial_dir) else ""
+            ps_script = (
+                "Add-Type -AssemblyName System.Windows.Forms;"
+                "$d = New-Object System.Windows.Forms.FolderBrowserDialog;"
+                f"$d.Description = {repr(title)};"
+                f"{init_dir_arg}"
+                "$form = New-Object System.Windows.Forms.Form;"
+                "$form.TopMost = $true;"
+                "$form.Width = 1; $form.Height = 1; $form.Opacity = 0;"
+                "$form.Show();"
+                "$form.Activate();"
+                "if ($d.ShowDialog($form) -eq 'OK') { Write-Output $d.SelectedPath };"
+                "$form.Close();"
+            )
+            cmd = ["powershell", "-STA", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script]
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                creationflags=creationflags
+            )
+            path = result.stdout.strip()
+            if path:
+                return path
+            return ""
+        except Exception as e:
+            print(f"PowerShell folder dialog error: {e}")
+            if is_frozen:
+                return ""
+
+    if is_frozen:
+        # In a frozen environment, we must not execute sys.executable -c because it would relaunch the packaged app
+        return ""
+
     try:
         # 用獨立的 python 子進程開啟 tkinter filedialog
         # 避免 Flask 的非主線程環境下呼叫 tkinter 導致視窗凍結或崩潰 (Tcl/Tk Thread-safety issue)
@@ -321,6 +363,52 @@ def _save_file_dialog(title: str, default_filename: str, file_types: list) -> st
     """顯示檔案儲存對話框，返回使用者選擇的檔案路徑；取消則返回空字串。"""
     import subprocess
     import sys
+    import os
+
+    is_frozen = getattr(sys, 'frozen', False)
+
+    if sys.platform == "win32":
+        try:
+            filter_parts = []
+            for name, ext in file_types:
+                filter_parts.append(f"{name} ({ext})|{ext}")
+            filter_str = "|".join(filter_parts)
+
+            ps_script = (
+                "Add-Type -AssemblyName System.Windows.Forms;"
+                "$d = New-Object System.Windows.Forms.SaveFileDialog;"
+                f"$d.Title = {repr(title)};"
+                f"$d.FileName = {repr(default_filename)};"
+                f"$d.Filter = {repr(filter_str)};"
+                "$form = New-Object System.Windows.Forms.Form;"
+                "$form.TopMost = $true;"
+                "$form.Width = 1; $form.Height = 1; $form.Opacity = 0;"
+                "$form.Show();"
+                "$form.Activate();"
+                "if ($d.ShowDialog($form) -eq 'OK') { Write-Output $d.FileName };"
+                "$form.Close();"
+            )
+            cmd = ["powershell", "-STA", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script]
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                creationflags=creationflags
+            )
+            path = result.stdout.strip()
+            if path:
+                return path
+            return ""
+        except Exception as e:
+            print(f"PowerShell save dialog error: {e}")
+            if is_frozen:
+                return ""
+
+    if is_frozen:
+        return ""
+
     try:
         # 用獨立的 python 子進程開啟 tkinter filedialog.asksaveasfilename
         file_types_str = str(file_types)
@@ -364,6 +452,55 @@ def _select_files_dialog(title: str, initial_dir: str = None, file_types: list =
     """顯示檔案選擇彈窗，支援多選，返回使用者選擇的檔案路徑列表；取消則返回空列表。"""
     import subprocess
     import sys
+    import os
+
+    is_frozen = getattr(sys, 'frozen', False)
+
+    if sys.platform == "win32":
+        try:
+            filter_parts = []
+            for name, ext in file_types or [("PDF Files", "*.pdf"), ("All Files", "*.*")]:
+                filter_parts.append(f"{name} ({ext})|{ext}")
+            filter_str = "|".join(filter_parts)
+
+            init_dir_arg = f"$d.InitialDirectory = {repr(initial_dir)};" if initial_dir and os.path.exists(initial_dir) else ""
+
+            ps_script = (
+                "Add-Type -AssemblyName System.Windows.Forms;"
+                "$d = New-Object System.Windows.Forms.OpenFileDialog;"
+                f"$d.Title = {repr(title)};"
+                f"$d.Multiselect = $true;"
+                f"$d.Filter = {repr(filter_str)};"
+                f"{init_dir_arg}"
+                "$form = New-Object System.Windows.Forms.Form;"
+                "$form.TopMost = $true;"
+                "$form.Width = 1; $form.Height = 1; $form.Opacity = 0;"
+                "$form.Show();"
+                "$form.Activate();"
+                "if ($d.ShowDialog($form) -eq 'OK') { Write-Output ($d.FileNames -join ';') };"
+                "$form.Close();"
+            )
+            cmd = ["powershell", "-STA", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script]
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                creationflags=creationflags
+            )
+            out = result.stdout.strip()
+            if out:
+                return [p.strip() for p in out.split(";")]
+            return []
+        except Exception as e:
+            print(f"PowerShell open files dialog error: {e}")
+            if is_frozen:
+                return []
+
+    if is_frozen:
+        return []
+
     try:
         file_types_str = str(file_types or [("PDF Files", "*.pdf"), ("All Files", "*.*")])
         # 用獨立的 python 子進程開啟 tkinter filedialog.askopenfilenames

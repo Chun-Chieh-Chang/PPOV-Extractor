@@ -885,11 +885,6 @@ def wait_and_launch_browser(port):
         time.sleep(0.1)
 
 if __name__ == "__main__":
-    load_config()
-    # 啟動時自動清空本地資料庫，確保產線開啟時為乾淨起點，引導用戶自主載入最新總表
-    db["extracted_data"] = []
-    save_db_to_file()
-
     port = 5000
 
     # 1. 檢查埠位是否已被另一個正在運行的實例佔用
@@ -897,6 +892,11 @@ if __name__ == "__main__":
         print(f"PPOV Extractor 服務已在運行中。正在引導至網頁頁面...")
         webbrowser.open(f"http://127.0.0.1:{port}")
         sys.exit(0)
+
+    load_config()
+    # 啟動時自動清空本地資料庫，確保產線開啟時為乾淨起點，引導用戶自主載入最新總表
+    db["extracted_data"] = []
+    save_db_to_file()
 
     # 2. 若埠位空閒，啟動背景線程感應服務 bind 狀態後才開啟網頁
     import threading
