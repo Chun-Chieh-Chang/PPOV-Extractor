@@ -1,13 +1,13 @@
 ; PPOV Extractor - Inno Setup Script
-; Version: 1.9.4
+; Version: 1.9.5
 
 [Setup]
 AppName=PPOV Extractor
-AppVersion=1.9.4
+AppVersion=1.9.5
 DefaultDirName={autopf}\PPOV Extractor
 DefaultGroupName=PPOV Extractor
 OutputDir=C:\Users\USER\Downloads\PPOV-Extractor\output
-OutputBaseFilename=PPOV-Extractor-Setup-v1.9.4
+OutputBaseFilename=PPOV-Extractor-Setup-v1.9.5
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin

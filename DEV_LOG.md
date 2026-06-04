@@ -110,4 +110,11 @@
     3. **打包安全護欄**：在 `main.py` 的對話框函式中加入 `is_frozen = getattr(sys, 'frozen', False)` 判斷，在打包環境下若 PowerShell 失敗或取消，直接返回空值，**絕對禁止**調用 `sys.executable -c`。
     4. **啟動埠位校驗重排**：將 `app.py` 的雙開校驗埠位佔用代碼提前至 `load_config` 與清空資料庫之前，徹底防禦任何手動或自動雙開對資料庫造成的二次清空破壞。
 
-
+* **修復公模溫度數據出現亂碼 Bug (2026-06-04)**：
+  * **原因 (RCA)**：
+    1. PDF 表格中有些參數的下限/上限值填寫為 `NAC` (NCA的輸入錯誤/變體)，而核心 regex 匹配模式 `\b\d+\.?\d*\b|NCA|N/A` 沒有匹配 `NAC`，導致整行解析的 Token 數量不符合預期的表格式數據行（長度小於 3），進而使得整個 row 被跳過。
+    2. 這導致解析邏輯誤選了前面的 `冷卻時間` 行（具有 3 個符合 Token `10.0`, `NCA`, `NCA`），將其錯誤匹配到母模溫度中。而公模溫度在 Fallback 時回傳了 `main.py` 中寫死的 Mojibake 亂碼字串 `?芣??`。
+  * **矯正措施 (CAPA)**：
+    1. 在 `main.py` 中，將 `find_table_value` 函式中的三個 regex 匹配模式均更新為相容 `NAC`：`\b\d+\.?\d*\b|NCA|NAC|N/A` 與 `\b(\d+\.?\d*|NCA|NAC|N/A)\b`。
+    2. 將 `main.py` 中 Fallback 錯誤回傳的硬編碼亂碼字串 `?芣??` 修正為正常的中文 `"未找到"`。
+    3. 在 `verify_extraction.py` 中，更新測試 PDF 的實際存放路徑，並移除 `config.json` 中已不存在的 `充填階段的模重_目標值` 欄位斷言，確保本機確效腳本 `verify.ps1` 能夠 100% 通過。

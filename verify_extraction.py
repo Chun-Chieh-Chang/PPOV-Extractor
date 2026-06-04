@@ -9,7 +9,7 @@ import json
 from main import extract_data_from_pdf
 
 def test_single_pdf():
-    pdf_path = "TestData/PPOV_MI03001(B)_A02-210-251_Rev.B_2025-06-11.pdf"
+    pdf_path = "PPOV/PPOV主要控管條件表_2026-05-27/2003/MI03001(B)/A02-210-251/PPOV_MI03001(B)_A02-210-251_Rev.B_2025-06-11.pdf"
     config_path = "config.json"
     
     if not os.path.exists(pdf_path):
@@ -31,7 +31,6 @@ def test_single_pdf():
         
         # Verify specific fields
         expected = {
-            "充填階段的模重_目標值": "5.08",
             "保壓完的模重_目標值": "5.60",
             "鎖模力_目標值": "40",
             "烘料條件": "N/A",

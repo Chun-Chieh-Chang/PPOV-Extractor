@@ -113,7 +113,7 @@ def find_table_value(text, keywords, parameters):
                     current_line = lines[j]
                     
                     # Extract numeric tokens and common placeholders
-                    tokens = re.findall(r'\b\d+\.?\d*\b|NCA|N/A', current_line, re.IGNORECASE)
+                    tokens = re.findall(r'\b\d+\.?\d*\b|NCA|NAC|N/A', current_line, re.IGNORECASE)
 
                     # Handle special slash formats (e.g., "10 / 20 / 30")
                     if len(tokens) == 6 and '/' in current_line:
@@ -128,7 +128,7 @@ def find_table_value(text, keywords, parameters):
                         if value_type == "target": return tokens[0]
                         elif value_type == "low": return tokens[1]
                         elif value_type == "high": return tokens[2]
-                        elif value_type == "actual": return tokens[3] if len(tokens) > 3 else "?芣??"
+                        elif value_type == "actual": return tokens[3] if len(tokens) > 3 else "未找到"
 
                 # Phase 2: Fallback for single-value parameters (like Mold Cycle Time)
                 # This ensures we don't pick up a value from a neighboring table row.
@@ -142,18 +142,18 @@ def find_table_value(text, keywords, parameters):
                             k_pos = lines[j].find(keyword)
                             after_k = lines[j][k_pos+len(keyword):].strip()
                             # Try to find the first token immediately following the keyword
-                            match = re.search(r'\b(\d+\.?\d*|NCA|N/A)\b', after_k, re.IGNORECASE)
+                            match = re.search(r'\b(\d+\.?\d*|NCA|NAC|N/A)\b', after_k, re.IGNORECASE)
                             if match: return match.group(1)
                         
                         # Case B: Line contains exactly one token (and no other conflicting keywords)
-                        tokens = re.findall(r'\b(\d+\.?\d*|NCA|N/A)\b', current_line, re.IGNORECASE)
+                        tokens = re.findall(r'\b(\d+\.?\d*|NCA|NAC|N/A)\b', current_line, re.IGNORECASE)
                         if len(tokens) == 1:
                             # Avoid picking up tokens that belong to other process parameters
                             conflicts = ["FILL", "SHOT", "PACKED", "CLAMP", "TONNAGE", "CYCLE", "MOLD"]
                             if not any(c in current_line.upper() for c in conflicts if c not in keyword.upper()):
                                 return tokens[0]
 
-    return "?芣??" 
+    return "未找到" 
 
 def find_material_number(text, keywords):
     """
