@@ -118,3 +118,14 @@
     1. 在 `main.py` 中，將 `find_table_value` 函式中的三個 regex 匹配模式均更新為相容 `NAC`：`\b\d+\.?\d*\b|NCA|NAC|N/A` 與 `\b(\d+\.?\d*|NCA|NAC|N/A)\b`。
     2. 將 `main.py` 中 Fallback 錯誤回傳的硬編碼亂碼字串 `?芣??` 修正為正常的中文 `"未找到"`。
     3. 在 `verify_extraction.py` 中，更新測試 PDF 的實際存放路徑，並移除 `config.json` 中已不存在的 `充填階段的模重_目標值` 欄位斷言，確保本機確效腳本 `verify.ps1` 能夠 100% 通過。
+
+* **修復相同品號不同模具顯示相同規格單與數據混淆 Bug (2026-06-04)**：
+  * **原因 (RCA)**：
+    1. 前端 `static/app.js` 的表格 click 事件中，僅利用品號 `part_no` 查找 `state.items` 中的記錄。若有多個相同品號、不同模具的資料列時，選取後永遠只會匹配到陣列中的第一筆記錄。
+    2. 後端 `app.py` 多個 API 端點 (add, edit, delete, export, import) 也只以 `產品型號` 為唯一鍵，造成重複新增受阻、單檔 PDF 解析匯入時不同模具 PDF 互相覆蓋、修改或刪除時一次影響多筆等問題。
+    3. 現場量測實際值暫存區 `state.inspectionData` 亦以 `part_no` 為鍵值，導致相同品號但不同模具之現場數據混淆覆蓋。
+  * **矯正與預防措施 (CAPA)**：
+    1. 將系統唯一鍵全面對齊 PDF 的唯一 `"檔案名稱"` (File Name)。表格渲染新增 `data-filename` 屬性，點選時改以 `檔案名稱` 作為精準比對。
+    2. 手動新增時自動產生唯一虛擬檔名 `MANUAL_{part_no}_{mold_no}_{timestamp}.pdf`，並修改後端查重邏輯為「產品型號 + 模具編號」皆同才視為重複，允許同品號不同模具規格共存。
+    3. 重構 `/api/db/edit`、`/api/db/delete`、`/api/db/import_pdf` 與 `/api/export_part`，全面支持並優先使用 `檔案名稱` 進行精準修改、刪除、覆蓋檢查與導出。
+    4. 將 `state.inspectionData` 的 Key 調整為以 `filename` 鍵入，確保不同模仁/機台數據完全隔離，提供精準的查檢表 Excel 實際值寫入。

@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import io
 import json
 import webbrowser
@@ -200,21 +201,23 @@ def db_add_record():
         return jsonify({"success": False, "message": "產品型號（品號）為必填項"})
     
     part_no = new_record.get("產品型號").strip()
+    mold_no = new_record.get("模具編號", "").strip()
     
-    # Check duplicate
-    if any(item.get("產品型號") == part_no for item in db["extracted_data"]):
-        return jsonify({"success": False, "message": f"品號 {part_no} 已存在於資料庫中"})
+    # Check duplicate by combination of product part number and mold number
+    if any(item.get("產品型號") == part_no and item.get("模具編號", "").strip() == mold_no for item in db["extracted_data"]):
+        return jsonify({"success": False, "message": f"品號 {part_no} 且模具編號 {mold_no} 的規格已存在於資料庫中"})
     
-    # Supply defaults
+    # Supply defaults with a unique filename including mold number and timestamp
     if not new_record.get("檔案名稱"):
-        new_record["檔案名稱"] = f"MANUAL_{part_no}.pdf"
+        suffix = mold_no if mold_no else "DEFAULT"
+        new_record["檔案名稱"] = f"MANUAL_{part_no}_{suffix}_{int(time.time())}.pdf"
         
     db["extracted_data"].append(new_record)
     save_db_to_file()
     
     return jsonify({
         "success": True, 
-        "message": f"品號 {part_no} 新增成功", 
+        "message": f"品號 {part_no} (模具: {mold_no or '預設'}) 新增成功", 
         "data": db["extracted_data"]
     })
 
@@ -226,11 +229,12 @@ def db_edit_record():
         return jsonify({"success": False, "message": "無效的修改請求，品號必填"})
         
     part_no = edit_data.get("產品型號").strip()
+    filename = edit_data.get("檔案名稱", "").strip()
     
-    # Find and update
+    # Find and update using filename if available, fallback to part_no
     found = False
     for i, item in enumerate(db["extracted_data"]):
-        if item.get("產品型號") == part_no:
+        if (filename and item.get("檔案名稱") == filename) or (not filename and item.get("產品型號") == part_no):
             # Update values
             for k, v in edit_data.items():
                 item[k] = v
@@ -238,12 +242,12 @@ def db_edit_record():
             break
             
     if not found:
-        return jsonify({"success": False, "message": f"在資料庫中找不到品號 {part_no}"})
+        return jsonify({"success": False, "message": f"在資料庫中找不到對應的規格記錄" if filename else f"在資料庫中找不到品號 {part_no}"})
         
     save_db_to_file()
     return jsonify({
         "success": True, 
-        "message": f"品號 {part_no} 修改成功", 
+        "message": f"規格修改成功", 
         "data": db["extracted_data"]
     })
 
@@ -252,19 +256,23 @@ def db_edit_record():
 def db_delete_record():
     payload = request.json or {}
     part_no = payload.get("part_no")
-    if not part_no:
-        return jsonify({"success": False, "message": "無效的刪除請求，品號必填"})
+    filename = payload.get("filename")
+    if not part_no and not filename:
+        return jsonify({"success": False, "message": "無效的刪除請求，參數不足"})
         
     initial_len = len(db["extracted_data"])
-    db["extracted_data"] = [item for item in db["extracted_data"] if item.get("產品型號") != part_no]
+    if filename:
+        db["extracted_data"] = [item for item in db["extracted_data"] if item.get("檔案名稱") != filename]
+    else:
+        db["extracted_data"] = [item for item in db["extracted_data"] if item.get("產品型號") != part_no]
     
     if len(db["extracted_data"]) == initial_len:
-        return jsonify({"success": False, "message": f"在資料庫中找不到品號 {part_no}"})
+        return jsonify({"success": False, "message": f"在資料庫中找不到該規格記錄"})
         
     save_db_to_file()
     return jsonify({
         "success": True, 
-        "message": f"品號 {part_no} 刪除成功", 
+        "message": f"規格刪除成功", 
         "data": db["extracted_data"]
     })
 
@@ -323,15 +331,15 @@ def db_import_single_pdf():
             
         load_db_from_file()
         
-        # 檢查是否已存在，進行覆蓋/新增合併
-        existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("產品型號") == part_no), None)
+        # 檢查是否已存在，進行覆蓋/新增合併 (以檔案名稱為準，防止不同模具的 PDF 彼此覆蓋)
+        existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("檔案名稱") == filename), None)
         
         if existing_idx is not None:
             db["extracted_data"][existing_idx] = data
-            msg = f"品號 {part_no} 已存在於資料庫中，已成功重新解析 PDF 並覆蓋規格參數！"
+            msg = f"檔案 {filename} 已存在於資料庫中，已成功重新解析 PDF 並覆蓋規格參數！"
         else:
             db["extracted_data"].append(data)
-            msg = f"品號 {part_no} 解析成功，已自動導入規格資料庫！"
+            msg = f"品號 {part_no} (檔案: {filename}) 解析成功，已自動導入規格資料庫！"
             
         save_db_to_file()
         
@@ -385,8 +393,9 @@ def db_import_pdf_native():
             if not part_no or part_no == "未找到":
                 continue
                 
-            # 檢查是否已存在，進行覆蓋/新增合併
-            existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("產品型號") == part_no), None)
+            # 檢查是否已存在，進行覆蓋/新增合併 (以檔案名稱為準，防止不同模具的 PDF 彼此覆蓋)
+            current_filename = os.path.basename(filepath)
+            existing_idx = next((i for i, item in enumerate(db["extracted_data"]) if item.get("檔案名稱") == current_filename), None)
             
             if existing_idx is not None:
                 db["extracted_data"][existing_idx] = data
@@ -551,13 +560,18 @@ def export_master():
 def export_part_excel():
     """Generates a highly premium structured Excel sheet for a single part.""" 
     part_no = request.json.get("part_no")
+    filename = request.json.get("filename")
     inspection_data = request.json.get("inspection_data", {})
-    if not part_no:
-        return jsonify({"success": False, "message": "請指定品號"})
+    if not part_no and not filename:
+        return jsonify({"success": False, "message": "請指定規格記錄"})
         
-    part_data = next((item for item in db["extracted_data"] if item.get("產品型號") == part_no), None)
+    if filename:
+        part_data = next((item for item in db["extracted_data"] if item.get("檔案名稱") == filename), None)
+    else:
+        part_data = next((item for item in db["extracted_data"] if item.get("產品型號") == part_no), None)
+        
     if not part_data:
-        return jsonify({"success": False, "message": f"找不到品號 {part_no} 的數據"})
+        return jsonify({"success": False, "message": "找不到指定規格的數據"})
         
     # Generate beautifully styled spreadsheet using openpyxl
     wb = openpyxl.Workbook()

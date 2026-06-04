@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
         sortKey: null,
         sortDirection: "asc", // "asc" or "desc"
         user: { username: "guest", role: "inspector", display_name: "品質檢查員" }, // 預設為免密碼品檢員 (Phase D)
+        editingFilename: null,
     };
 
     // Environment detection for GitHub Pages or local static file
@@ -318,9 +319,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!tr || tr.parentElement !== tbodyMaster) return;
         
         const partNo = tr.getAttribute("data-part-no");
-        if (!partNo) return;
+        const filename = tr.getAttribute("data-filename");
+        if (!filename) return;
         
-        const item = state.items.find(x => x["產品型號"] === partNo);
+        const item = state.items.find(x => x["檔案名稱"] === filename);
         if (!item) return;
 
         // Check if edit button was clicked
@@ -335,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const btnDelete = e.target.closest(".btn-delete-row");
         if (btnDelete) {
             e.stopPropagation();
-            deletePartRecord(partNo);
+            deletePartRecord(partNo, filename);
             return;
         }
 
@@ -486,7 +488,9 @@ document.addEventListener("DOMContentLoaded", () => {
         displayData.forEach(item => {
             const tr = document.createElement("tr");
             const partNo = item["產品型號"] || "";
+            const filename = item["檔案名稱"] || "";
             tr.setAttribute("data-part-no", partNo);
+            tr.setAttribute("data-filename", filename);
             
             tr.innerHTML = `
                 <td><strong>${partNo || "未知"}</strong></td>
@@ -505,7 +509,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
 
             // Highlight selected row
-            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+            if (state.selectedItem && state.selectedItem["檔案名稱"] === filename) {
                 tr.classList.add("selected");
             }
 
@@ -556,9 +560,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Restore saved inspection data if available for this part
-        const partNo = item["產品型號"];
-        const saved = state.inspectionData[partNo];
+        // Restore saved inspection data if available for this part (keyed by unique filename)
+        const filename = item["檔案名稱"];
+        const saved = filename ? state.inspectionData[filename] : null;
         if (saved) {
             document.querySelectorAll('[data-input-key]').forEach(td => {
                 const key = td.getAttribute('data-input-key');
@@ -595,8 +599,8 @@ document.addEventListener("DOMContentLoaded", () => {
             table.classList.add('edit-mode');
         });
 
-        const partNo = state.selectedItem ? state.selectedItem["產品型號"] : null;
-        const saved = partNo ? (state.inspectionData[partNo] || {}) : {};
+        const filename = state.selectedItem ? state.selectedItem["檔案名稱"] : null;
+        const saved = filename ? (state.inspectionData[filename] || {}) : {};
 
         // Convert all [data-input-key] cells to input fields
         document.querySelectorAll('[data-input-key]').forEach(td => {
@@ -634,27 +638,27 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // Collect all input values and save to state
-        const partNo = state.selectedItem ? state.selectedItem["產品型號"] : null;
-        if (!partNo) return;
+        const filename = state.selectedItem ? state.selectedItem["檔案名稱"] : null;
+        if (!filename) return;
 
-        if (!state.inspectionData[partNo]) {
-            state.inspectionData[partNo] = {};
+        if (!state.inspectionData[filename]) {
+            state.inspectionData[filename] = {};
         }
 
         document.querySelectorAll('.inspect-input').forEach(input => {
             const key = input.getAttribute('data-key');
             const val = input.value.trim();
             if (val) {
-                state.inspectionData[partNo][key] = val;
+                state.inspectionData[filename][key] = val;
             } else {
-                delete state.inspectionData[partNo][key];
+                delete state.inspectionData[filename][key];
             }
         });
 
         // Convert inputs back to display text
         document.querySelectorAll('[data-input-key]').forEach(td => {
             const key = td.getAttribute('data-input-key');
-            const val = state.inspectionData[partNo][key];
+            const val = state.inspectionData[filename][key];
             td.classList.remove('editable-cell');
             if (val) {
                 td.innerHTML = `<span class="inspect-value">${val}</span>`;
@@ -764,6 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnExportPartSpec.addEventListener("click", async () => {
         if (!state.selectedItem) return;
         const partNo = state.selectedItem["產品型號"];
+        const filename = state.selectedItem["檔案名稱"] || "";
         
         if (isStaticMode) {
             try {
@@ -904,7 +909,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         '模具溫度設定-滑塊_實際值': 'temps_actual',
                     };
                     const inspKey = actualKeyMap[actual_k];
-                    const inspData = state.inspectionData[partNo] || {};
+                    const inspData = state.inspectionData[filename] || {};
                     row.getCell(5).value = (inspKey && inspData[inspKey]) ? inspData[inspKey] : "";
                     
                     for (let c = 2; c <= 5; c++) {
@@ -954,7 +959,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         '週期時間_目標值': 'ref_cycle_check',
                     };
                     const refInspKey = refKeyMap[key];
-                    const refInspData = state.inspectionData[partNo] || {};
+                    const refInspData = state.inspectionData[filename] || {};
                     row.getCell(5).value = (refInspKey && refInspData[refInspKey]) ? refInspData[refInspKey] : "";
                     row.getCell(5).font = value_font;
                     row.getCell(5).alignment = center_align;
@@ -984,7 +989,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 check_row1.getCell(1).alignment = left_align;
                 check_row1.getCell(1).border = thin_border;
 
-                const signData = state.inspectionData[partNo] || {};
+                const signData = state.inspectionData[filename] || {};
                 check_row1.getCell(2).value = signData['sign_press_no'] || "";
                 check_row1.getCell(2).border = thin_border;
 
@@ -1078,7 +1083,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/api/export_part", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ part_no: partNo, inspection_data: state.inspectionData[partNo] || {} })
+                body: JSON.stringify({ part_no: partNo, filename: filename, inspection_data: state.inspectionData[filename] || {} })
             });
             if (response.ok) {
                 const buffer = await response.arrayBuffer();
@@ -1155,6 +1160,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formPartEdit.reset();
         
         if (item) {
+            state.editingFilename = item["檔案名稱"];
             lblModalTitle.textContent = `編輯品號規格數據 - ${item["產品型號"]}`;
             const partNoField = document.getElementById("edit_part_no");
             partNoField.value = item["產品型號"];
@@ -1169,6 +1175,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         } else {
+            state.editingFilename = null;
             lblModalTitle.textContent = "手動新增品號規格數據";
             const partNoField = document.getElementById("edit_part_no");
             partNoField.value = "";
@@ -1217,28 +1224,35 @@ document.addEventListener("DOMContentLoaded", () => {
         record["產品型號"] = partNo;
         
         const isEdit = editPartNoField.disabled;
+        if (isEdit && state.editingFilename) {
+            record["檔案名稱"] = state.editingFilename;
+        } else {
+            const moldNo = record["模具編號"] || "";
+            const suffix = moldNo ? moldNo : "DEFAULT";
+            record["檔案名稱"] = `MANUAL_${partNo}_${suffix}_${Date.now()}.pdf`;
+        }
         
         if (isStaticMode) {
             if (isEdit) {
-                const idx = state.items.findIndex(item => item["產品型號"] === partNo);
+                const idx = state.items.findIndex(item => item["檔案名稱"] === record["檔案名稱"]);
                 if (idx !== -1) {
                     const oldItem = state.items[idx];
                     state.items[idx] = { ...oldItem, ...record };
                 }
             } else {
-                if (state.items.some(item => item["產品型號"] === partNo)) {
-                    alert(`品號 ${partNo} 已存在於資料庫中！`);
+                const moldNo = record["模具編號"] || "";
+                if (state.items.some(item => item["產品型號"] === partNo && item["模具編號"] === moldNo)) {
+                    alert(`品號 ${partNo} 且模具編號 ${moldNo} 的規格已存在於資料庫中！`);
                     return;
                 }
-                record["檔案名稱"] = `MANUAL_${partNo}.pdf`;
                 state.items.push(record);
             }
             
             partEditModal.classList.remove("active");
             renderMasterTable(state.items);
             
-            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
-                state.selectedItem = state.items.find(item => item["產品型號"] === partNo);
+            if (state.selectedItem && state.selectedItem["檔案名稱"] === record["檔案名稱"]) {
+                state.selectedItem = state.items.find(item => item["檔案名稱"] === record["檔案名稱"]);
                 renderSpecSheet(state.selectedItem);
             }
             alert(isEdit ? "品號規格修改成功！" : "品號規格新增成功！");
@@ -1262,8 +1276,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 partEditModal.classList.remove("active");
                 renderMasterTable(state.items);
                 
-                if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
-                    state.selectedItem = state.items.find(item => item["產品型號"] === partNo);
+                if (state.selectedItem && state.selectedItem["檔案名稱"] === record["檔案名稱"]) {
+                    state.selectedItem = state.items.find(item => item["檔案名稱"] === record["檔案名稱"]);
                     renderSpecSheet(state.selectedItem);
                 }
                 alert(result.message || "儲存成功！");
@@ -1280,15 +1294,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 4. Delete part record
-    async function deletePartRecord(partNo) {
-        if (!partNo) return;
+    async function deletePartRecord(partNo, filename) {
+        if (!partNo || !filename) return;
         const confirmDelete = confirm(`⚠️ 確定要刪除品號 ${partNo} 嗎？\n\n此動作將從資料庫中永久移除該筆規格數據！`);
         if (!confirmDelete) return;
         
         if (isStaticMode) {
-            state.items = state.items.filter(item => item["產品型號"] !== partNo);
+            state.items = state.items.filter(item => item["檔案名稱"] !== filename);
             renderMasterTable(state.items);
-            if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+            if (state.selectedItem && state.selectedItem["檔案名稱"] === filename) {
                 state.selectedItem = null;
                 blankPartState.style.display = "flex";
                 partSpecCard.style.display = "none";
@@ -1301,13 +1315,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/api/db/delete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ part_no: partNo })
+                body: JSON.stringify({ part_no: partNo, filename: filename })
             });
             const result = await response.json();
             if (result.success) {
                 state.items = result.data;
                 renderMasterTable(state.items);
-                if (state.selectedItem && state.selectedItem["產品型號"] === partNo) {
+                if (state.selectedItem && state.selectedItem["檔案名稱"] === filename) {
                     state.selectedItem = null;
                     blankPartState.style.display = "flex";
                     partSpecCard.style.display = "none";
