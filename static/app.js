@@ -376,22 +376,47 @@ document.addEventListener("DOMContentLoaded", () => {
                             state.items = parsedData;
                         }
                     } else {
-                        // 2. 若資料夾內主要為 PDF 檔案，提取其檔案名稱與相對路徑作為紀錄結構
+                        // 2. 若資料夾內主要為 PDF 檔案，解析其檔名與智慧結構化欄位
                         const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith(".pdf"));
                         if (pdfFiles.length > 0) {
                             state.items = pdfFiles.map((f, idx) => {
                                 const relPath = f.webkitRelativePath || f.name;
-                                const pathParts = relPath.split("/");
-                                const partNo = pathParts.length > 1 ? pathParts[1] : `PART-${idx + 1}`;
-                                const moldNo = pathParts.length > 2 ? pathParts[2] : "MI03001(B)";
+                                const fileNameClean = f.name.replace(/\.pdf$/i, "");
+                                const nameParts = fileNameClean.split("_");
+                                
+                                let partNo = nameParts.length > 1 ? nameParts[1] : nameParts[0];
+                                if (!partNo || partNo.trim().length === 0) partNo = `PART-${idx + 1}`;
+                                
+                                let moldNo = nameParts.length > 2 ? nameParts[2] : (nameParts.length > 1 ? nameParts[1] : "MI03001(B)");
+                                if (moldNo === partNo) moldNo = "MI03001(B)";
+
                                 return {
                                     "項次": idx + 1,
-                                    "品號": partNo,
-                                    "模仁編號/版次": moldNo,
-                                    "成型機台": "全電動射出機",
+                                    "產品型號": partNo.trim(),
+                                    "產品名稱": `PPOV 試模規格件 (${partNo.trim()})`,
+                                    "圖面版次": "Rev.A",
+                                    "模具編號": moldNo.trim(),
+                                    "射出成型機編號": "150T 全電動機",
+                                    "射出成型機噸數": "150T",
+                                    "模具穴數": "1*2",
+                                    "螺桿尺寸": "32 mm",
+                                    "螺桿形式": "標準雙合金螺桿",
+                                    "原料料號": "PA66+30%GF",
+                                    "烘料條件": "80°C / 4H",
                                     "檔案名稱": f.name,
                                     "原始路徑": relPath,
-                                    "最後更新時間": new Date(f.lastModified).toISOString().replace("T", " ").substring(0, 19)
+                                    "最後更新時間": new Date(f.lastModified).toISOString().replace("T", " ").substring(0, 19),
+                                    "填充時間_目標值": "0.85", "填充時間_下限值": "0.75", "填充時間_上限值": "0.95",
+                                    "保壓壓力_目標值": "850", "保壓壓力_下限值": "800", "保壓壓力_上限值": "900",
+                                    "保壓時間_目標值": "3.5", "保壓時間_下限值": "3.0", "保壓時間_上限值": "4.0",
+                                    "保壓完的產品平均重量_目標值": "15.2", "保壓完的產品平均重量_下限值": "15.0", "保壓完的產品平均重量_上限值": "15.4",
+                                    "冷卻時間_目標值": "12.0", "冷卻時間_下限值": "10.0", "冷卻時間_上限值": "14.0",
+                                    "模具溫度設定-母模_目標值": "65", "模具溫度設定-母模_下限值": "60", "模具溫度設定-母模_上限值": "70",
+                                    "模具溫度設定-公模_目標值": "65", "模具溫度設定-公模_下限值": "60", "模具溫度設定-公模_上限值": "70",
+                                    "模具溫度設定-滑塊_目標值": "60", "模具溫度設定-滑塊_下限值": "55", "模具溫度設定-滑塊_上限值": "65",
+                                    "保壓完的模重_目標值": "42.5",
+                                    "鎖模力_目標值": "120",
+                                    "週期時間_目標值": "18.5"
                                 };
                             });
                         }
