@@ -327,10 +327,37 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    btnSelectFolder.addEventListener("click", () => {
-        if (inputFolder) {
-            inputFolder.value = ""; // 重置 input 確保重複選擇相同資料夾均能精準觸發 change 事件
-            inputFolder.click();
+    btnSelectFolder.addEventListener("click", async () => {
+        if (isStaticMode) {
+            if (inputFolder) {
+                inputFolder.value = "";
+                inputFolder.click();
+            }
+            return;
+        }
+
+        // 本地 Flask 後端模式：調用 Python 原生 OS 資料夾選擇器
+        try {
+            const response = await fetch("/api/select_folder", { method: "POST" });
+            const result = await response.json();
+            if (result.success) {
+                state.folderPath = result.path;
+                state.staticFolderFiles = null; // 清空瀏覽器暫存，優先使用後端實體路徑提取
+                txtCurrentFolder.textContent = result.path;
+                btnStartExtract.disabled = false;
+            } else {
+                // 若原生選擇器未選取或不支援，備援切換為 HTML5 選擇器
+                if (inputFolder) {
+                    inputFolder.value = "";
+                    inputFolder.click();
+                }
+            }
+        } catch (error) {
+            console.warn("Native folder picker fallback to HTML5 picker:", error);
+            if (inputFolder) {
+                inputFolder.value = "";
+                inputFolder.click();
+            }
         }
     });
 
@@ -354,7 +381,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, 150);
 
-        // 若有選取的本機資料夾檔案或在靜態模式下，全權由瀏覽器前端記憶體完成數據解析
+        // 若在靜態模式下或使用 HTML5 選擇器傳入檔案，由瀏覽器前端記憶體完成數據解析
         if (isStaticMode || (state.staticFolderFiles && state.staticFolderFiles.length > 0)) {
             setTimeout(async () => {
                 try {
