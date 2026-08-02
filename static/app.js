@@ -195,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             alert("JSON 格式解析錯誤");
                         }
                         btnLoadMasterFile.disabled = false;
-                        btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表`;
+                        btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表(Excel檔案)`;
                     };
                     reader.readAsText(file);
                 } else {
@@ -230,14 +230,14 @@ document.addEventListener("DOMContentLoaded", () => {
                             alert("本地解析 Excel 總表時出錯！請確認檔案格式是否正確。");
                         }
                         btnLoadMasterFile.disabled = false;
-                        btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表`;
+                        btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表(Excel檔案)`;
                     };
                     reader.readAsArrayBuffer(file);
                 }
             } catch (error) {
                 console.error("Local load error:", error);
                 btnLoadMasterFile.disabled = false;
-                btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表`;
+                btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表(Excel檔案)`;
             }
             return;
         }
@@ -268,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("載入總表程序發生異常錯誤");
         } finally {
             btnLoadMasterFile.disabled = false;
-            btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表`;
+            btnLoadMasterFile.innerHTML = `<i class="fa-solid fa-file-excel"></i> 載入現有總表(Excel檔案)`;
         }
     });
 
