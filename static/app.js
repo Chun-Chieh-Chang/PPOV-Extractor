@@ -207,13 +207,30 @@ document.addEventListener("DOMContentLoaded", () => {
                             const firstSheetName = workbook.SheetNames[0];
                             const worksheet = workbook.Sheets[firstSheetName];
                             
-                            // Parse Excel to JSON array
+                            // Header Alias Normalization Map
+                            const headerAliasMap = {
+                                "品號": "產品型號", "Part No.": "產品型號", "Part No": "產品型號", "產品型號 Part No.": "產品型號",
+                                "品名": "產品名稱", "Description": "產品名稱", "產品名稱 Description": "產品名稱",
+                                "版次": "圖面版次", "Drawing Rev.": "圖面版次", "Drawing Rev": "圖面版次", "產品圖面版次 Drawing Rev.": "圖面版次",
+                                "模號": "模具編號", "Mold No.": "模具編號", "Mold No": "模具編號", "模具編號Mold No.": "模具編號",
+                                "機台": "射出成型機編號", "Press No.": "射出成型機編號", "Press No": "射出成型機編號", "射出成型機編號 Press No.": "射出成型機編號"
+                            };
+
+                            // Parse Excel to JSON array with normalized headers
                             const jsonData = XLSX.utils.sheet_to_json(worksheet);
                             
-                            state.items = jsonData.map(row => {
+                            state.items = jsonData.map((row, idx) => {
                                 const newRow = {};
                                 for (const [k, v] of Object.entries(row)) {
-                                    newRow[k] = (v === null || v === undefined) ? "" : String(v);
+                                    const cleanKey = k.trim();
+                                    const normKey = headerAliasMap[cleanKey] || cleanKey;
+                                    newRow[normKey] = (v === null || v === undefined) ? "" : String(v).trim();
+                                }
+                                // Ensure filename exists for unique identification (matching a0e732a architecture)
+                                if (!newRow["檔案名稱"]) {
+                                    const partNo = newRow["產品型號"] || `PART_${idx + 1}`;
+                                    const moldNo = newRow["模具編號"] || "";
+                                    newRow["檔案名稱"] = moldNo ? `${partNo}_${moldNo}.pdf` : `${partNo}.pdf`;
                                 }
                                 return newRow;
                             });
@@ -277,11 +294,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const tr = e.target.closest("tr");
         if (!tr || tr.parentElement !== tbodyMaster) return;
         
-        const partNo = tr.getAttribute("data-part-no");
-        const filename = tr.getAttribute("data-filename");
-        if (!filename) return;
+        const partNo = tr.getAttribute("data-part-no") || "";
+        const filename = tr.getAttribute("data-filename") || "";
+        const allRows = Array.from(tbodyMaster.children);
+        const rowIndex = allRows.indexOf(tr);
         
-        const item = state.items.find(x => x["檔案名稱"] === filename);
+        // 遵循 a0e732a 架構：三級精準定位模式 (檔名 -> 品號+模號 -> 列索引)
+        const item = state.items.find(x => 
+            (filename && x["檔案名稱"] === filename) ||
+            (partNo && x["產品型號"] === partNo && (!filename || x["檔案名稱"] === filename))
+        ) || state.items[rowIndex];
+
         if (!item) return;
 
         // Check if edit button was clicked
@@ -296,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const btnDelete = e.target.closest(".btn-delete-row");
         if (btnDelete) {
             e.stopPropagation();
-            deletePartRecord(partNo, filename);
+            deletePartRecord(partNo, item["檔案名稱"] || filename);
             return;
         }
 
