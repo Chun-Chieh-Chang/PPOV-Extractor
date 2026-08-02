@@ -2,6 +2,19 @@
 
 All significant project events, wiki ingests, and architectural decisions are recorded here.
 
+## [2026-08-02] Refactor | Project Architecture Consolidation & Backend Extraction Reversion
+*   **Action**: Completed full 5-step SOP project refactor & cleanup (`project-refactor-cleanup` skill).
+*   **Changes**:
+    - Purged client-side mock PDF generation code and restored pure Python backend `pdfplumber` PDF parameter extraction (`/api/select_folder` & `/api/extract`).
+    - Standardized button labels: `"選擇資料夾(PDF檔案)"` (`#btnSelectFolder`) and `"載入現有總表(Excel檔案)"` (`#btnLoadMasterFile`).
+    - Implemented Header Alias Normalization Map (`"品號"` -> `"產品型號"`, `"模號"` -> `"模具編號"`, etc.) for seamless master table loading across non-standard Excel/JSON formats.
+    - Upgraded Master Table row selection to a 3-tier lookup algorithm (`"檔案名稱"` -> `"產品型號"+ "模具編號"` -> Row Index) matching commit `a0e732a` architecture.
+    - Synchronized `DEV_LOG.md`, `docs/DEV_LOG.md`, `wiki/log.md`, `AGENTS.md`, and `GEMINI.md`.
+    - Created system-global skill `project-refactor-cleanup` under `C:\Users\3kids\.gemini\config\skills\project-refactor-cleanup\SKILL.md`.
+*   **Goal**: Ensure 100% data integrity with real PDF parameters, enforce historical baseline preservation, and eliminate data mismatch.
+
+---
+
 ## [2026-08-02] Refactor | GitHub Pages HTML5 Folder Picker & Passwordless Access Control
 *   **Action**: Implemented native browser folder selection for GitHub Pages & completely purged password login infrastructure.
 *   **Changes**:
