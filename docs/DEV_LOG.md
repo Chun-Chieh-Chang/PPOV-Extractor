@@ -147,3 +147,17 @@
   * **矯正與預防措施 (CAPA)**：
     1. 在修改任何通用模組前，強制審查 Commit 歷史紀錄 (`git log` / `git show`)，確認前人修復之 Edge Cases 與業務規則。
     2. 欄位名稱、資料庫 Key 值與定位邏輯嚴格沿用 `config.json` 及 `a0e732a` 的標準規範，防止對應失效。
+
+* **專案整體程式碼、資安防衛與靜態雙軌優化作業 (2026-08-02 Refactor SOP)**：
+  * **需求內容摘要**：
+    * 執行專案整體程式碼、檔案與文件之全流程優化與重構 SOP。
+    * 解決 GitHub Pages 靜態網頁點擊資料夾選擇器時觸發 Chromium `webkitdirectory`「上傳 249 個檔案」資安警告與連帶彈窗問題。
+    * 恢復 JavaScript 全域語法與 RBAC 角色遮罩（`applyRoleMask("inspector")` 預設隱藏管理員按鈕）。
+  * **原因與根因分析 (RCA)**：
+    1. 靜態網頁模式下呼叫 `inputFolder.click()` 會觸發 Chromium 原生 `webkitdirectory` 資料夾上傳提示（顯示「要將 X 個檔案上傳到這個網站嗎？」），對使用者造成資安恐慌。
+    2. `static/app.js` 曾因 `const inputFolder` 重複宣告引發 `Uncaught SyntaxError`，導致腳本載入中斷，RBAC 權限遮罩失效。
+  * **矯正與預防措施 (CAPA)**：
+    1. **徹底移除上傳彈窗**：在 GitHub Pages 模式下禁止觸發 `webkitdirectory` 上傳視窗，改為明確優雅地引導使用者使用「載入現有總表(Excel檔案)」或本機執行 `python app.py`。
+    2. **語法除錯與權限遮罩修復**：清除重複的 `inputFolder` 變數宣告，恢復全域腳本正常執行與 `applyRoleMask` 遮罩防禦。
+    3. **文檔與依賴同步**：同步更新 `System_Admin_Manual.html`、`DEV_LOG.md` 與 `wiki/log.md`，並執行 `INSTALL.ps1` 確保全域 IDE/AI 規則 100% 對齊。
+  * **確效測試與基準點**：通過 `verify.ps1` 100% 軟體確效測試。 Git Commit: `1a77db4`

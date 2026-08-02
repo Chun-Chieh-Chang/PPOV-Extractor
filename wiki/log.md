@@ -2,6 +2,18 @@
 
 All significant project events, wiki ingests, and architectural decisions are recorded here.
 
+## [2026-08-02] Security & Refactor | Dual-Mode Security Architecture & Full SOP Cleanup
+*   **Action**: Completed 5-step SOP project refactor & security hardening (`project-refactor-cleanup` skill).
+*   **Changes**:
+    - Purged Chromium `webkitdirectory` folder upload trigger (`inputFolder.click()`) on GitHub Pages to prevent scary "Upload 249 files" browser security warnings and guarantee zero privacy risks.
+    - Resolved `Uncaught SyntaxError: Identifier 'inputFolder' has already been declared` in `static/app.js`, restoring script execution and RBAC role mask (`applyRoleMask("inspector")`).
+    - Integrated Mozilla `PDF.js` CDN library in `index.html` & `templates/index.html` for client-side zero-server browser memory text parsing.
+    - Synchronized documentation across `System_Admin_Manual.html`, `DEV_LOG.md`, `docs/DEV_LOG.md`, `wiki/log.md`, `AGENTS.md`, and `GEMINI.md`.
+    - Executed `./verify.ps1` achieving 100% software validation with exit code 0.
+*   **Goal**: Ensure zero security warnings, perfect RBAC permission masking, complete doc-code alignment, and dual-mode operational excellence.
+
+---
+
 ## [2026-08-02] Refactor | Project Architecture Consolidation & Backend Extraction Reversion
 *   **Action**: Completed full 5-step SOP project refactor & cleanup (`project-refactor-cleanup` skill).
 *   **Changes**:
