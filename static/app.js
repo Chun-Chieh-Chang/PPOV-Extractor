@@ -462,10 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- BUTTON: SELECT FOLDER ---
     btnSelectFolder.addEventListener("click", async () => {
         if (isStaticMode) {
-            if (inputFolder) {
-                inputFolder.value = "";
-                inputFolder.click();
-            }
+            alert("💡 提示：在 GitHub Pages 靜態展示頁面中，無須上傳或掃描您的本機資料夾（系統不會要求上傳檔案，確保絕對資安）。\n\n在靜態網頁展示中，請直接點擊上方『載入現有總表(Excel檔案)』按鈕，選擇 PPOV_Master_Table.xlsx 或 JSON 檔案進行分析與導出！\n\n如需對硬碟資料夾內的 PDF 報告進行實體掃描，請執行本機 Python 伺服器 (python app.py)。");
             return;
         }
 
@@ -478,22 +475,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 txtCurrentFolder.textContent = result.path;
                 btnStartExtract.disabled = false;
             } else {
-                if (inputFolder) {
-                    inputFolder.value = "";
-                    inputFolder.click();
-                }
+                console.warn(result.message);
             }
         } catch (error) {
-            console.warn("Native folder picker fallback to HTML5 picker:", error);
-            if (inputFolder) {
-                inputFolder.value = "";
-                inputFolder.click();
-            }
+            console.error("Error choosing folder:", error);
+            alert("資料夾選擇失敗：請確認本機 Python 伺服器 (python app.py) 正常運行中！");
         }
     });
 
     // --- BUTTON: START EXTRACTION ---
     btnStartExtract.addEventListener("click", async () => {
+        if (isStaticMode) {
+            alert("💡 提示：PDF 自動同步與硬碟實體掃描功能需要 Python 後端伺服器運行。\n\n在 GitHub Pages 展示模式中，請直接使用上方『載入現有總表(Excel檔案)』開啟彙總數據！");
+            return;
+        }
         if (!state.folderPath) return;
 
         btnSelectFolder.disabled = true;
@@ -511,74 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, 150);
 
-        // GitHub Pages 靜態網頁模式 或 使用 HTML5 資料夾選擇器傳入檔案：由瀏覽器解析資料夾內的總表 (Excel/JSON) 或 PDF 規格報告
-        if (isStaticMode || (state.staticFolderFiles && state.staticFolderFiles.length > 0)) {
-            setTimeout(async () => {
-                try {
-                    const files = state.staticFolderFiles || [];
-                    const masterFile = files.find(f => f.name.toLowerCase().endsWith(".json") || f.name.toLowerCase().endsWith(".xlsx"));
-                    const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith(".pdf"));
-
-                    if (masterFile) {
-                        if (masterFile.name.toLowerCase().endsWith(".json")) {
-                            const text = await masterFile.text();
-                            const parsed = JSON.parse(text);
-                            state.items = Array.isArray(parsed) ? parsed : (parsed.extracted_data || []);
-                        } else if (masterFile.name.toLowerCase().endsWith(".xlsx")) {
-                            const arrayBuffer = await masterFile.arrayBuffer();
-                            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const parsedData = XLSX.utils.sheet_to_json(firstSheet);
-                            state.items = parsedData;
-                        }
-                        
-                        renderMasterTable(state.items);
-                        badgeCount.textContent = state.items.length;
-                        if (state.items.length > 0) {
-                            masterExportGroup.style.display = "flex";
-                            inputSearch.disabled = false;
-                        }
-                        alert(`✅ 已成功從資料夾中解析彙總表 ${masterFile.name}（共 ${state.items.length} 筆規格）！`);
-                    } else if (pdfFiles.length > 0) {
-                        const parsedResults = [];
-                        for (const pdfFile of pdfFiles) {
-                            const itemData = await extractPdfDataInBrowser(pdfFile);
-                            parsedResults.push(itemData);
-                        }
-                        state.items = parsedResults;
-                        renderMasterTable(state.items);
-                        badgeCount.textContent = state.items.length;
-                        if (state.items.length > 0) {
-                            masterExportGroup.style.display = "flex";
-                            inputSearch.disabled = false;
-                        }
-                        alert(`✅ 已成功在瀏覽器端解析 ${pdfFiles.length} 個 PDF 規格報告檔案！`);
-                    } else {
-                        alert("💡 提示：選取的資料夾內未找到可解析的 PDF 報告或總表檔案 (.xlsx/.json)。");
-                    }
-
-                    clearInterval(progressTimer);
-                    progressFill.style.width = "100%";
-                    txtProgressPercent.textContent = "100%";
-                    setTimeout(() => {
-                        progressContainer.style.display = "none";
-                        btnSelectFolder.disabled = false;
-                        btnStartExtract.disabled = false;
-                    }, 300);
-
-                } catch (err) {
-                    clearInterval(progressTimer);
-                    progressContainer.style.display = "none";
-                    btnSelectFolder.disabled = false;
-                    btnStartExtract.disabled = false;
-                    console.error("Folder parse error:", err);
-                    alert("資料夾解析失敗：請確認檔案格式是否正確！");
-                }
-            }, 400);
-            return;
-        }
-
-        // 本地 Flask 後端模式：100% 由 Python 後端 pdfplumber 實體解析硬碟 PDF 檔案
+        // 本地 Flask 後端模式：100% 由 Python 後端 pdfplumber 實體解析硬碟 PDF 檔案 (繼承 a0e732a 權威邏輯)
         try {
             const response = await fetch("/api/extract", {
                 method: "POST",
