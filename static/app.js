@@ -327,24 +327,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    btnSelectFolder.addEventListener("click", async () => {
-        if (isStaticMode) {
-            // 在 GitHub Pages 靜態環境中，觸發 HTML5 原生資料夾選擇器
-            if (inputFolder) inputFolder.click();
-            return;
-        }
-        try {
-            const response = await fetch("/api/select_folder", { method: "POST" });
-            const result = await response.json();
-            if (result.success) {
-                state.folderPath = result.path;
-                txtCurrentFolder.textContent = result.path;
-                btnStartExtract.disabled = false;
-            } else {
-                console.warn(result.message);
-            }
-        } catch (error) {
-            console.error("Error choosing folder:", error);
+    btnSelectFolder.addEventListener("click", () => {
+        if (inputFolder) {
+            inputFolder.value = ""; // 重置 input 確保重複選擇相同資料夾均能精準觸發 change 事件
+            inputFolder.click();
         }
     });
 
@@ -368,8 +354,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, 150);
 
-        if (isStaticMode) {
-            // 靜態展示模式 (GitHub Pages)：全權由瀏覽器前端記憶體完成數據解析，無任何網路傳輸或數據外洩隱患
+        // 若有選取的本機資料夾檔案或在靜態模式下，全權由瀏覽器前端記憶體完成數據解析
+        if (isStaticMode || (state.staticFolderFiles && state.staticFolderFiles.length > 0)) {
             setTimeout(async () => {
                 try {
                     const files = state.staticFolderFiles || [];
@@ -433,7 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     progressContainer.style.display = "none";
                     btnSelectFolder.disabled = false;
                     btnStartExtract.disabled = false;
-                    console.error("Static extraction error:", err);
+                    console.error("Folder extraction error:", err);
                     alert("資料夾解析失敗：請確認選取的檔案格式正確！");
                 }
             }, 600);
