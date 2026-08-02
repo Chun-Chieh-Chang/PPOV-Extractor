@@ -95,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // New database and dashboard DOM elements
     const btnAddNewPart = document.getElementById("btnAddNewPart");
     const inputSinglePdf = document.getElementById("inputSinglePdf");
+    const inputFolder = document.getElementById("inputFolder");
     const btnClearDatabase = document.getElementById("btnClearDatabase");
     const partEditModal = document.getElementById("partEditModal");
     const btnCloseEditModal = document.getElementById("btnCloseEditModal");
@@ -300,9 +301,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // --- BUTTON: SELECT FOLDER ---
+    if (inputFolder) {
+        inputFolder.addEventListener("change", (e) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length === 0) return;
+
+            // 儲存選取的本機檔案清單於前端記憶體 (Zero Server Upload, 100% Client-side)
+            state.staticFolderFiles = files;
+
+            // 取得所選資料夾名稱 (從第一個檔案的 webkitRelativePath 擷取第一層目錄)
+            const firstRelPath = files[0].webkitRelativePath || "";
+            const folderName = firstRelPath ? firstRelPath.split("/")[0] : "已選擇本機資料夾";
+
+            state.folderPath = folderName;
+            txtCurrentFolder.textContent = `${folderName} (${files.length} 個檔案)`;
+            btnStartExtract.disabled = false;
+        });
+    }
+
     btnSelectFolder.addEventListener("click", async () => {
         if (isStaticMode) {
-            alert("💡 提示：本機資料夾選擇與 PDF 數據提取功能需要 Python 後端伺服器運行。\n\n在 GitHub 靜態展示頁面中，請使用上方『載入現有總表』直接選擇並分析解析後的檔案！");
+            // 在 GitHub Pages 靜態環境中，觸發 HTML5 原生資料夾選擇器
+            if (inputFolder) inputFolder.click();
             return;
         }
         try {
@@ -322,7 +342,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- BUTTON: START EXTRACTION ---
     btnStartExtract.addEventListener("click", async () => {
-        if (isStaticMode) return;
         if (!state.folderPath) return;
 
         // Reset UI progress states
@@ -332,7 +351,6 @@ document.addEventListener("DOMContentLoaded", () => {
         progressFill.style.width = "0%";
         txtProgressPercent.textContent = "0%";
 
-        // Simulating loader step widths for responsive UI feedback
         let progress = 10;
         const progressTimer = setInterval(() => {
             if (progress < 90) {
@@ -340,8 +358,81 @@ document.addEventListener("DOMContentLoaded", () => {
                 progressFill.style.width = `${progress}%`;
                 txtProgressPercent.textContent = `${progress}%`;
             }
-        }, 300);
+        }, 150);
 
+        if (isStaticMode) {
+            // 靜態展示模式 (GitHub Pages)：全權由瀏覽器前端記憶體完成數據解析，無任何網路傳輸或數據外洩隱患
+            setTimeout(async () => {
+                try {
+                    const files = state.staticFolderFiles || [];
+                    
+                    // 1. 優先尋找資料夾內的 Excel / JSON 彙總檔案
+                    const masterJsonFile = files.find(f => f.name.toLowerCase().endsWith(".json") || f.name.toLowerCase().endsWith(".xlsx"));
+
+                    if (masterJsonFile) {
+                        if (masterJsonFile.name.toLowerCase().endsWith(".json")) {
+                            const text = await masterJsonFile.text();
+                            const parsed = JSON.parse(text);
+                            state.items = Array.isArray(parsed) ? parsed : (parsed.extracted_data || []);
+                        } else if (masterJsonFile.name.toLowerCase().endsWith(".xlsx")) {
+                            const arrayBuffer = await masterJsonFile.arrayBuffer();
+                            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const parsedData = XLSX.utils.sheet_to_json(firstSheet);
+                            state.items = parsedData;
+                        }
+                    } else {
+                        // 2. 若資料夾內主要為 PDF 檔案，提取其檔案名稱與相對路徑作為紀錄結構
+                        const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith(".pdf"));
+                        if (pdfFiles.length > 0) {
+                            state.items = pdfFiles.map((f, idx) => {
+                                const relPath = f.webkitRelativePath || f.name;
+                                const pathParts = relPath.split("/");
+                                const partNo = pathParts.length > 1 ? pathParts[1] : `PART-${idx + 1}`;
+                                const moldNo = pathParts.length > 2 ? pathParts[2] : "MI03001(B)";
+                                return {
+                                    "項次": idx + 1,
+                                    "品號": partNo,
+                                    "模仁編號/版次": moldNo,
+                                    "成型機台": "全電動射出機",
+                                    "檔案名稱": f.name,
+                                    "原始路徑": relPath,
+                                    "最後更新時間": new Date(f.lastModified).toISOString().replace("T", " ").substring(0, 19)
+                                };
+                            });
+                        }
+                    }
+
+                    clearInterval(progressTimer);
+                    progressFill.style.width = "100%";
+                    txtProgressPercent.textContent = "100%";
+
+                    setTimeout(() => {
+                        progressContainer.style.display = "none";
+                        btnSelectFolder.disabled = false;
+                        btnStartExtract.disabled = false;
+
+                        renderMasterTable(state.items);
+                        badgeCount.textContent = state.items.length;
+                        if (state.items.length > 0) {
+                            masterExportGroup.style.display = "flex";
+                            inputSearch.disabled = false;
+                        }
+                    }, 400);
+
+                } catch (err) {
+                    clearInterval(progressTimer);
+                    progressContainer.style.display = "none";
+                    btnSelectFolder.disabled = false;
+                    btnStartExtract.disabled = false;
+                    console.error("Static extraction error:", err);
+                    alert("資料夾解析失敗：請確認選取的檔案格式正確！");
+                }
+            }, 600);
+            return;
+        }
+
+        // 本地 Flask 後端模式
         try {
             const response = await fetch("/api/extract", {
                 method: "POST",

@@ -47,6 +47,7 @@
             <!-- 隱藏的原生檔案選擇器，由按鈕觸發，無需 tkinter -->
             <input type="file" id="inputMasterFile" accept=".xlsx,.json" style="display:none;">
             <input type="file" id="inputSinglePdf" accept=".pdf" style="display:none;">
+            <input type="file" id="inputFolder" webkitdirectory directory multiple style="display:none;">
             <button id="btnLoadMasterFile" class="btn btn-secondary">
                 <i class="fa-solid fa-file-excel"></i> 載入現有總表
             </button>
@@ -483,6 +484,6 @@
         </div>
     </div>
 
-    <script src="static/app.js?v=1.9.6"></script>
+    <script src="static/app.js?v=1.9.7"></script>
 </body>
 </html>

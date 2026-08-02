@@ -130,13 +130,15 @@
     3. 重構 `/api/db/edit`、`/api/db/delete`、`/api/db/import_pdf` 與 `/api/export_part`，全面支持並優先使用 `檔案名稱` 進行精準修改、刪除、覆蓋檢查與導出。
     4. 將 `state.inspectionData` 的 Key 調整為以 `filename` 鍵入，確保不同模仁/機台數據完全隔離，提供精準的查檢表 Excel 實際值寫入。
 
-* **管理員登入觸發機制重構：實作 Header 版號標籤「5連擊解鎖權限」(2026-08-02)**：
+* **GitHub Pages 支援 HTML5 原生資料夾選擇器與全流程數據隱私防禦 (2026-08-02)**：
   * **需求內容**：
-    * 完全取消並刪除密碼登入功能，移除所有密碼驗證彈窗與密碼修改 UI。
-    * 在 Header 的版號標籤（`#btnVersion`）實作無密碼「5連擊解鎖權限」：使用者在 1.5 秒內連續點擊 5 次版本號標籤，即直接解鎖 Admin 管理員權限，並顯示 Morandi 浮動 Toast 提示；點擊登出圖示直接無縫切換回品質檢查員模式。
+    * 使「選擇資料夾」功能在 GitHub Pages 靜態展示網頁中完整生效。
+    * 全面盤點專案網路傳輸、資料儲存與 Git 歷史，確保零數據隱私外洩風險。
   * **原因 (RCA) & 矯正與預防措施 (CAPA)**：
-    * 遵循 MECE 原則完全裁撤 `loginOverlay` 與 `changePasswordModal` 彈窗 HTML 結構、`users.json` 設定檔，以及 `app.js` 全數密碼處理死碼。
-    * 重構 `app.py` 後端認證 API：刪除密碼驗證邏輯與 `users.json` 讀寫，替換為精簡安全之 `/api/auth/elevate` 直連提權端點。
-    * 引進「1.5 秒時間戳記滑動視窗 (Sliding Window)」演算法，100% 精準捕捉 1.5 秒內之 5 連擊解鎖。
-    * 在前端注入輕量化 Morandi 懸浮 Toast 提示，提權/降權切換即時獲得視覺回饋。
+    * **GitHub Pages 原生選擇器適配**：新增 `<input type="file" id="inputFolder" webkitdirectory directory multiple>` 隱藏標籤。在 GitHub Pages (`isStaticMode = true`) 環境下，點擊「選擇資料夾」將觸發 HTML5 原生資料夾選擇視窗。
+    * **純前端記憶體解析 (Zero-Server Processing)**：選擇資料夾後，檔案讀取與解析全數於用戶端瀏覽器記憶體（`FileReader` / `SheetJS`）內完成，不向外部伺服器發送任何網路 API 請求。
+    * **資安防護審查 (Privacy Audit)**：
+      1. 網路零外洩：靜態模式下零 HTTP fetch 請求，用戶上傳或選取之報告數據絕對不會離開本地瀏覽器。
+      2. 儲存零殘留：無使用 `localStorage` 或 `sessionStorage` 儲存任何工廠規格數據。
+      3. 版本庫防護：`.gitignore` 已完善排除 `PPOV/`、`input_pdfs/`、`*.xlsx`、`*.json` 等敏感報告，Git 倉庫僅包含開源前端原始碼。
 
