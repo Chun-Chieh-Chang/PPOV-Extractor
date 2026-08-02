@@ -109,10 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const txtStatsTotalPresses = document.getElementById("txtStatsTotalPresses");
     const txtStatsLastSync = document.getElementById("txtStatsLastSync");
 
-    // Version Control UI Modal Elements
+    // Version Control UI Element
     const btnVersion = document.getElementById("btnVersion");
-    const versionModal = document.getElementById("versionModal");
-    const btnCloseVersion = document.getElementById("btnCloseVersion");
 
     // Phase D: Auth and Login UI Elements
     const loginOverlay = document.getElementById("loginOverlay");
@@ -182,30 +180,6 @@ document.addEventListener("DOMContentLoaded", () => {
         inputMasterFile.click();
     });
 
-    // --- SYSTEM VERSION & CHANGELOG MODAL LOGIC ---
-    if (btnVersion && versionModal && btnCloseVersion) {
-        btnVersion.addEventListener("click", () => {
-            versionModal.classList.add("active");
-        });
-
-        btnCloseVersion.addEventListener("click", () => {
-            versionModal.classList.remove("active");
-        });
-
-        // Close when clicking outside of the modal content
-        versionModal.addEventListener("click", (e) => {
-            if (e.target === versionModal) {
-                versionModal.classList.remove("active");
-            }
-        });
-
-        // Close on Escape key press
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape" && versionModal.classList.contains("active")) {
-                versionModal.classList.remove("active");
-            }
-        });
-    }
 
     // 使用者選好檔案後，自動上傳或在本地解析
     inputMasterFile.addEventListener("change", async () => {

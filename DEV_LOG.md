@@ -136,6 +136,7 @@
     * 在 Header 的版號標籤（`#btnVersion`）實作「5連擊解鎖權限」：使用者需在 1.5 秒內連續點擊 5 次版本號標籤，始可觸發解鎖 Admin 管理模式（彈出管理員登入驗證視窗），逾時（超過 1.5 秒未滿 5 次）自動重置計數。
   * **原因 (RCA) & 矯正與預防措施 (CAPA)**：
     * 遵循 MECE 原則完全裁撤 Header 顯式 `btnLoginPrompt` 按鈕（包含 HTML 結構與 `app.js` 全數 DOM/事件綁定死碼）。
+    * 完全裁撤「PPOV Extractor 系統更新日誌」彈窗（`versionModal` HTML 結構及 `app.js` 單擊彈出邏輯），解決點擊版本號標籤時跳出更新日誌 Modal 干擾連擊驗證之問題。
     * 在 CSS 中加強 `.version-badge` 的互動美學與點擊體驗（ Morandi 色系微調、`cursor: pointer`、`user-select: none`、`hover/active` 微動畫縮放）。
     * 在 `static/app.js` 的 `setupAuthEventListeners` 中注入 1.5 秒高階計時器連擊邏輯，達成精準且具備防誤觸與防護欄功能的管理員密碼驗證解鎖機制。
 
