@@ -56,6 +56,6 @@ The GitHub Actions workflow in `.github/workflows/deploy.yml` deploys the reposi
 The current restore baseline tag is:
 
 ```text
-restore-baseline-20260527-1000
+restore-baseline-20260802-cleanup-v1.9.5
 ```
 

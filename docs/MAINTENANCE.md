@@ -29,13 +29,13 @@ Before pushing:
 The current restore baseline tag is:
 
 ```text
-restore-baseline-20260527-cleanup-v1.7.1
+restore-baseline-20260802-cleanup-v1.9.5
 ```
 
 To inspect a tag:
 
 ```powershell
-git show restore-baseline-20260527-cleanup-v1.7.1
+git show restore-baseline-20260802-cleanup-v1.9.5
 ```
 
 To recover files from it, prefer targeted restore commands instead of resetting the entire worktree.
