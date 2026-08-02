@@ -2,6 +2,17 @@
 
 All significant project events, wiki ingests, and architectural decisions are recorded here.
 
+## [2026-08-02] Refactor | Admin Mode 5-Click Unlock & MECE Clean-up
+*   **Action**: Refactored Administrator Mode trigger & performed MECE codebase optimization.
+*   **Changes**:
+    - Replaced explicit "Admin Login" button with a hidden 5-click easter egg on `#btnVersion` tag (1.5s time window).
+    - Purged `btnLoginPrompt` HTML button element and all Javascript DOM & handler code paths (`index.html`, `templates/index.html`, `static/app.js`).
+    - Enhanced Morandi design tokens and micro-interactions for `.version-badge` UI.
+    - Updated documentation across `DEV_LOG.md`, `docs/Password_Management.html`, `docs/System_Admin_Manual.html`, and `wiki/log.md`.
+*   **Goal**: Streamline UI interface, enforce robust hidden auth escalation, eliminate dead code, and maintain 100% doc-code alignment.
+
+---
+
 ## [2026-06-03] Integration | Hermes Agent Core Capabilities
 *   **Source**: [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent)
 *   **Action**: Integrated Hermes Agent's core capabilities into SkillsBuilder skill library.

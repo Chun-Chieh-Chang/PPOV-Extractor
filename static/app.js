@@ -126,7 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const txtUserDisplayName = document.getElementById("txtUserDisplayName");
     const txtUserRole = document.getElementById("txtUserRole");
     const btnLogout = document.getElementById("btnLogout");
-    const btnLoginPrompt = document.getElementById("btnLoginPrompt");
     const btnCloseLogin = document.getElementById("btnCloseLogin");
 
     // Change-password modal DOM references
@@ -1504,7 +1503,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Phase D: Authentication and RBAC Logic ---
     async function checkAuthStatus() {
         if (isStaticMode) {
-            // 靜態模式：預設為 Inspector 免密碼身分，顯示管理員登入按鈕
+            // 靜態模式：預設為 Inspector 免密碼身分，由版號標籤連擊觸發管理員登入
             state.user = {
                 role: "inspector",
                 display_name: "品質檢查員"
@@ -1514,7 +1513,6 @@ document.addEventListener("DOMContentLoaded", () => {
             txtUserDisplayName.textContent = state.user.display_name;
             txtUserRole.textContent = "Inspector";
             txtUserRole.className = "user-role-badge inspector";
-            if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
             
             initFetchDatabase();
             return;
@@ -1530,7 +1528,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 txtUserDisplayName.textContent = state.user.display_name;
                 txtUserRole.textContent = "Admin";
                 txtUserRole.className = "user-role-badge admin";
-                if (btnLoginPrompt) btnLoginPrompt.style.display = "none";
                 
                 initFetchDatabase();
             } else {
@@ -1544,7 +1541,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 txtUserDisplayName.textContent = state.user.display_name;
                 txtUserRole.textContent = "Inspector";
                 txtUserRole.className = "user-role-badge inspector";
-                if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                 
                 initFetchDatabase();
             }
@@ -1560,7 +1556,6 @@ document.addEventListener("DOMContentLoaded", () => {
             txtUserDisplayName.textContent = state.user.display_name;
             txtUserRole.textContent = "Inspector";
             txtUserRole.className = "user-role-badge inspector";
-            if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
             initFetchDatabase();
         }
     }
@@ -1602,16 +1597,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function setupAuthEventListeners() {
-        // 管理員登入點擊提示
-        if (btnLoginPrompt) {
-            btnLoginPrompt.addEventListener("click", () => {
-                loginOverlay.classList.add("active");
-                if (login_username) {
-                    login_username.value = "";
-                    login_username.focus();
+        // 版號標籤 5 連擊解鎖管理員模式 (1.5 秒內連續點擊 5 次)
+        let versionClickCount = 0;
+        let versionClickTimer = null;
+
+        if (btnVersion) {
+            btnVersion.style.cursor = "pointer";
+            btnVersion.style.userSelect = "none";
+            btnVersion.title = "連續點擊 5 次解鎖管理員模式";
+
+            btnVersion.addEventListener("click", () => {
+                versionClickCount++;
+
+                if (versionClickTimer) {
+                    clearTimeout(versionClickTimer);
                 }
-                if (login_password) login_password.value = "";
-                loginErrorMsg.style.display = "none";
+
+                if (versionClickCount >= 5) {
+                    versionClickCount = 0;
+                    if (versionClickTimer) clearTimeout(versionClickTimer);
+
+                    // 觸發管理員登入 Modal
+                    if (loginOverlay) {
+                        loginOverlay.classList.add("active");
+                        if (login_username) {
+                            login_username.value = "";
+                            login_username.focus();
+                        }
+                        if (login_password) login_password.value = "";
+                        if (loginErrorMsg) loginErrorMsg.style.display = "none";
+                    }
+                } else {
+                    versionClickTimer = setTimeout(() => {
+                        versionClickCount = 0;
+                    }, 1500);
+                }
             });
         }
 
@@ -1656,7 +1676,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         txtUserDisplayName.textContent = state.user.display_name;
                         txtUserRole.textContent = "Admin";
                         txtUserRole.className = "user-role-badge admin";
-                        if (btnLoginPrompt) btnLoginPrompt.style.display = "none";
                         
                         // 重新繪製彙總表以顯示 Admin 的動作編輯按鈕
                         renderMasterTable(state.items);
@@ -1684,7 +1703,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     txtUserDisplayName.textContent = state.user.display_name;
                     txtUserRole.textContent = "Inspector";
                     txtUserRole.className = "user-role-badge inspector";
-                    if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                     loginOverlay.classList.remove("active");
                     
                     // 重新渲染 Master Table，完全隱藏管理列
@@ -1704,7 +1722,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         txtUserDisplayName.textContent = state.user.display_name;
                         txtUserRole.textContent = "Inspector";
                         txtUserRole.className = "user-role-badge inspector";
-                        if (btnLoginPrompt) btnLoginPrompt.style.display = "inline-flex";
                         loginOverlay.classList.remove("active");
                         
                         // 重新渲染 Master Table，完全隱藏管理列

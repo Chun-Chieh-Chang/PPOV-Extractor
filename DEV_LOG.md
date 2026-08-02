@@ -129,3 +129,13 @@
     2. 手動新增時自動產生唯一虛擬檔名 `MANUAL_{part_no}_{mold_no}_{timestamp}.pdf`，並修改後端查重邏輯為「產品型號 + 模具編號」皆同才視為重複，允許同品號不同模具規格共存。
     3. 重構 `/api/db/edit`、`/api/db/delete`、`/api/db/import_pdf` 與 `/api/export_part`，全面支持並優先使用 `檔案名稱` 進行精準修改、刪除、覆蓋檢查與導出。
     4. 將 `state.inspectionData` 的 Key 調整為以 `filename` 鍵入，確保不同模仁/機台數據完全隔離，提供精準的查檢表 Excel 實際值寫入。
+
+* **管理員登入觸發機制重構：實作 Header 版號標籤「5連擊解鎖權限」(2026-08-02)**：
+  * **需求內容**：
+    * 將原先顯式的「管理員登入」按鈕替換為隱蔽式觸發。
+    * 在 Header 的版號標籤（`#btnVersion`）實作「5連擊解鎖權限」：使用者需在 1.5 秒內連續點擊 5 次版本號標籤，始可觸發解鎖 Admin 管理模式（彈出管理員登入驗證視窗），逾時（超過 1.5 秒未滿 5 次）自動重置計數。
+  * **原因 (RCA) & 矯正與預防措施 (CAPA)**：
+    * 遵循 MECE 原則完全裁撤 Header 顯式 `btnLoginPrompt` 按鈕（包含 HTML 結構與 `app.js` 全數 DOM/事件綁定死碼）。
+    * 在 CSS 中加強 `.version-badge` 的互動美學與點擊體驗（ Morandi 色系微調、`cursor: pointer`、`user-select: none`、`hover/active` 微動畫縮放）。
+    * 在 `static/app.js` 的 `setupAuthEventListeners` 中注入 1.5 秒高階計時器連擊邏輯，達成精準且具備防誤觸與防護欄功能的管理員密碼驗證解鎖機制。
+
