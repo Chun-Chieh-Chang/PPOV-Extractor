@@ -332,60 +332,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // --- BUTTON: SELECT FOLDER ---
-    if (inputFolder) {
-        inputFolder.addEventListener("change", (e) => {
-            const files = Array.from(e.target.files || []);
-            if (files.length === 0) return;
-
-            // 儲存選取的本機檔案清單於前端記憶體 (Zero Server Upload, 100% Client-side)
-            state.staticFolderFiles = files;
-
-            // 取得所選資料夾名稱 (從第一個檔案的 webkitRelativePath 擷取第一層目錄)
-            const firstRelPath = files[0].webkitRelativePath || "";
-            const folderName = firstRelPath ? firstRelPath.split("/")[0] : "已選擇本機資料夾";
-
-            state.folderPath = folderName;
-            txtCurrentFolder.textContent = `${folderName} (${files.length} 個檔案)`;
-            btnStartExtract.disabled = false;
-        });
-    }
-
     btnSelectFolder.addEventListener("click", async () => {
         if (isStaticMode) {
-            if (inputFolder) {
-                inputFolder.value = "";
-                inputFolder.click();
-            }
+            alert("💡 提示：本機資料夾選擇與 PDF 數據提取功能需要 Python 後端伺服器運行。\n\n在 GitHub 靜態展示頁面中，請使用上方『載入現有總表(Excel檔案)』直接選擇並分析解析後的檔案！");
             return;
         }
-
-        // 本地 Flask 後端模式：調用 Python 原生 OS 資料夾選擇器
         try {
             const response = await fetch("/api/select_folder", { method: "POST" });
             const result = await response.json();
             if (result.success) {
                 state.folderPath = result.path;
-                state.staticFolderFiles = null; // 清空瀏覽器暫存，優先使用後端實體路徑提取
                 txtCurrentFolder.textContent = result.path;
                 btnStartExtract.disabled = false;
             } else {
-                // 若原生選擇器未選取或不支援，備援切換為 HTML5 選擇器
-                if (inputFolder) {
-                    inputFolder.value = "";
-                    inputFolder.click();
-                }
+                console.warn(result.message);
             }
         } catch (error) {
-            console.warn("Native folder picker fallback to HTML5 picker:", error);
-            if (inputFolder) {
-                inputFolder.value = "";
-                inputFolder.click();
-            }
+            console.error("Error choosing folder:", error);
         }
     });
 
     // --- BUTTON: START EXTRACTION ---
     btnStartExtract.addEventListener("click", async () => {
+        if (isStaticMode) return;
         if (!state.folderPath) return;
 
         // Reset UI progress states
@@ -395,6 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
         progressFill.style.width = "0%";
         txtProgressPercent.textContent = "0%";
 
+        // Simulating loader step widths for responsive UI feedback
         let progress = 10;
         const progressTimer = setInterval(() => {
             if (progress < 90) {
@@ -402,111 +372,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 progressFill.style.width = `${progress}%`;
                 txtProgressPercent.textContent = `${progress}%`;
             }
-        }, 150);
+        }, 300);
 
-        // 若在靜態模式下或使用 HTML5 選擇器傳入檔案，由瀏覽器前端記憶體完成數據解析
-        if (isStaticMode || (state.staticFolderFiles && state.staticFolderFiles.length > 0)) {
-            setTimeout(async () => {
-                try {
-                    const files = state.staticFolderFiles || [];
-                    
-                    // 1. 優先尋找資料夾內的 Excel / JSON 彙總檔案
-                    const masterJsonFile = files.find(f => f.name.toLowerCase().endsWith(".json") || f.name.toLowerCase().endsWith(".xlsx"));
-
-                    if (masterJsonFile) {
-                        if (masterJsonFile.name.toLowerCase().endsWith(".json")) {
-                            const text = await masterJsonFile.text();
-                            const parsed = JSON.parse(text);
-                            state.items = Array.isArray(parsed) ? parsed : (parsed.extracted_data || []);
-                        } else if (masterJsonFile.name.toLowerCase().endsWith(".xlsx")) {
-                            const arrayBuffer = await masterJsonFile.arrayBuffer();
-                            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const parsedData = XLSX.utils.sheet_to_json(firstSheet);
-                            state.items = parsedData;
-                        }
-                    } else {
-                        // 2. 若資料夾內主要為 PDF 檔案，解析其檔名與智慧結構化欄位
-                        const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith(".pdf"));
-                        if (pdfFiles.length > 0) {
-                            state.items = pdfFiles.map((f, idx) => {
-                                const relPath = f.webkitRelativePath || f.name;
-                                const fileNameClean = f.name.replace(/\.pdf$/i, "");
-                                const nameParts = fileNameClean.split("_");
-                                
-                                let partNo = nameParts.length > 1 ? nameParts[1] : nameParts[0];
-                                if (!partNo || partNo.trim().length === 0) partNo = `PART-${idx + 1}`;
-                                
-                                let moldNo = nameParts.length > 2 ? nameParts[2] : (nameParts.length > 1 ? nameParts[1] : "MI03001(B)");
-                                if (moldNo === partNo) moldNo = "MI03001(B)";
-
-                                return {
-                                    "項次": idx + 1,
-                                    "產品型號": partNo.trim(),
-                                    "產品名稱": `PPOV 試模規格件 (${partNo.trim()})`,
-                                    "圖面版次": "Rev.A",
-                                    "模具編號": moldNo.trim(),
-                                    "射出成型機編號": "150T 全電動機",
-                                    "射出成型機噸數": "150T",
-                                    "模具穴數": "1*2",
-                                    "螺桿尺寸": "32 mm",
-                                    "螺桿形式": "標準雙合金螺桿",
-                                    "原料料號": "PA66+30%GF",
-                                    "烘料條件": "80°C / 4H",
-                                    "檔案名稱": f.name,
-                                    "原始路徑": relPath,
-                                    "最後更新時間": new Date(f.lastModified).toISOString().replace("T", " ").substring(0, 19),
-                                    "填充時間_目標值": "0.85", "填充時間_下限值": "0.75", "填充時間_上限值": "0.95",
-                                    "保壓壓力_目標值": "850", "保壓壓力_下限值": "800", "保壓壓力_上限值": "900",
-                                    "保壓時間_目標值": "3.5", "保壓時間_下限值": "3.0", "保壓時間_上限值": "4.0",
-                                    "保壓完的產品平均重量_目標值": "15.2", "保壓完的產品平均重量_下限值": "15.0", "保壓完的產品平均重量_上限值": "15.4",
-                                    "冷卻時間_目標值": "12.0", "冷卻時間_下限值": "10.0", "冷卻時間_上限值": "14.0",
-                                    "模具溫度設定-母模_目標值": "65", "模具溫度設定-母模_下限值": "60", "模具溫度設定-母模_上限值": "70",
-                                    "模具溫度設定-公模_目標值": "65", "模具溫度設定-公模_下限值": "60", "模具溫度設定-公模_上限值": "70",
-                                    "模具溫度設定-滑塊_目標值": "60", "模具溫度設定-滑塊_下限值": "55", "模具溫度設定-滑塊_上限值": "65",
-                                    "保壓完的模重_目標值": "42.5",
-                                    "鎖模力_目標值": "120",
-                                    "週期時間_目標值": "18.5"
-                                };
-                            });
-                        }
-                    }
-
-                    clearInterval(progressTimer);
-                    progressFill.style.width = "100%";
-                    txtProgressPercent.textContent = "100%";
-
-                    setTimeout(() => {
-                        progressContainer.style.display = "none";
-                        btnSelectFolder.disabled = false;
-                        btnStartExtract.disabled = false;
-
-                        renderMasterTable(state.items);
-                        badgeCount.textContent = state.items.length;
-                        if (state.items.length > 0) {
-                            masterExportGroup.style.display = "flex";
-                            inputSearch.disabled = false;
-                        }
-                    }, 400);
-
-                } catch (err) {
-                    clearInterval(progressTimer);
-                    progressContainer.style.display = "none";
-                    btnSelectFolder.disabled = false;
-                    btnStartExtract.disabled = false;
-                    console.error("Folder extraction error:", err);
-                    alert("資料夾解析失敗：請確認選取的檔案格式正確！");
-                }
-            }, 600);
-            return;
-        }
-
-        // 本地 Flask 後端模式
         try {
             const response = await fetch("/api/extract", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ path: state.folderPath, incremental: false })
+                body: JSON.stringify({ path: state.folderPath })
             });
             const result = await response.json();
 
@@ -527,9 +399,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         masterExportGroup.style.display = "flex";
                         inputSearch.disabled = false;
                     }
-                    alert(result.message || `✅ 自動同步完成！資料庫已更新，共收錄 ${result.count} 筆規格數據。`);
                 } else {
-                    alert(result.message || "提取失敗！請確認資料夾內包含有效的 PPOV PDF 檔案。");
+                    alert(result.message || "提取失敗");
                 }
             }, 500);
 
