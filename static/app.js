@@ -1572,8 +1572,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setupAuthEventListeners() {
         // 版號標籤 5 連擊解鎖管理員模式 (1.5 秒內連續點擊 5 次)
-        let versionClickCount = 0;
-        let versionClickTimer = null;
+        let versionClickTimes = [];
 
         if (btnVersion) {
             btnVersion.style.cursor = "pointer";
@@ -1581,15 +1580,13 @@ document.addEventListener("DOMContentLoaded", () => {
             btnVersion.title = "連續點擊 5 次解鎖管理員模式";
 
             btnVersion.addEventListener("click", () => {
-                versionClickCount++;
+                const now = Date.now();
+                versionClickTimes.push(now);
+                // 精準過濾：僅保留 1.5 秒 (1500 ms) 時間滑動視窗內的點擊紀錄
+                versionClickTimes = versionClickTimes.filter(t => now - t <= 1500);
 
-                if (versionClickTimer) {
-                    clearTimeout(versionClickTimer);
-                }
-
-                if (versionClickCount >= 5) {
-                    versionClickCount = 0;
-                    if (versionClickTimer) clearTimeout(versionClickTimer);
+                if (versionClickTimes.length >= 5) {
+                    versionClickTimes = [];
 
                     // 觸發管理員登入 Modal
                     if (loginOverlay) {
@@ -1601,10 +1598,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (login_password) login_password.value = "";
                         if (loginErrorMsg) loginErrorMsg.style.display = "none";
                     }
-                } else {
-                    versionClickTimer = setTimeout(() => {
-                        versionClickCount = 0;
-                    }, 1500);
                 }
             });
         }
