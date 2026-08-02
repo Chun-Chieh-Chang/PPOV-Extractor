@@ -483,7 +483,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/api/extract", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ path: state.folderPath })
+                body: JSON.stringify({ path: state.folderPath, incremental: false })
             });
             const result = await response.json();
 
@@ -504,8 +504,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         masterExportGroup.style.display = "flex";
                         inputSearch.disabled = false;
                     }
+                    alert(result.message || `✅ 自動同步完成！資料庫已更新，共收錄 ${result.count} 筆規格數據。`);
                 } else {
-                    alert(result.message || "提取失敗");
+                    alert(result.message || "提取失敗！請確認資料夾內包含有效的 PPOV PDF 檔案。");
                 }
             }, 500);
 
