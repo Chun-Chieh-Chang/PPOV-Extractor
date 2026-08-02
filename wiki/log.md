@@ -2,6 +2,19 @@
 
 All significant project events, wiki ingests, and architectural decisions are recorded here.
 
+## [2026-08-02] Refactor | GitHub Pages HTML5 Folder Picker & Passwordless Access Control
+*   **Action**: Implemented native browser folder selection for GitHub Pages & completely purged password login infrastructure.
+*   **Changes**:
+    - HTML5 native folder selector (`#inputFolder webkitdirectory`) integrated into `index.html` & `templates/index.html`.
+    - Pure client-side in-memory processing engine implemented in `static/app.js` using `FileReader` & `SheetJS` (Zero-Server Upload, 0 HTTP Requests, 100% Client Privacy).
+    - Password login modals (`loginOverlay`, `changePasswordModal`), `users.json`, and all password hashing code completely purged.
+    - Upgraded 5-click easter egg to 1.5s sliding timestamp window algorithm (`now - t <= 1500`) with zero popups or tooltips for stealthy role elevation.
+    - Universal Blob Download Fallback added to `saveBlobWithPathPrompt` ensuring 100% export reliability across Firefox, Safari, and mobile browsers.
+    - Synchronized `DEV_LOG.md`, `docs/Password_Management.html`, `docs/System_Admin_Manual.html`, and `wiki/log.md`.
+*   **Goal**: Enable 100% feature parity on GitHub Pages with 0 data privacy leakage risks and ultra-streamlined UX.
+
+---
+
 ## [2026-08-02] Refactor | Admin Mode 5-Click Unlock & MECE Clean-up
 *   **Action**: Refactored Administrator Mode trigger & performed MECE codebase optimization.
 *   **Changes**:

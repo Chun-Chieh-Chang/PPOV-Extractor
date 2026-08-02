@@ -16,37 +16,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const isStaticMode = window.location.hostname.endsWith("github.io") || window.location.protocol === "file:";
 
     async function saveBlobWithPathPrompt(blob, suggestedName, format) {
-        if (!window.showSaveFilePicker) {
-            alert("此瀏覽器無法在匯出前詢問儲存路徑。\n\n請使用 Microsoft Edge / Google Chrome 開啟，或改用 Python 本機版匯出。");
-            return false;
-        }
+        if (window.showSaveFilePicker) {
+            const pickerTypes = format === "json"
+                ? [{
+                    description: "JSON Files",
+                    accept: { "application/json": [".json"] }
+                }]
+                : [{
+                    description: "Excel Files",
+                    accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] }
+                }];
 
-        const pickerTypes = format === "json"
-            ? [{
-                description: "JSON Files",
-                accept: { "application/json": [".json"] }
-            }]
-            : [{
-                description: "Excel Files",
-                accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] }
-            }];
-
-        try {
-            const fileHandle = await window.showSaveFilePicker({
-                suggestedName,
-                types: pickerTypes
-            });
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            alert(`檔案已儲存：\n${fileHandle.name}`);
-            return true;
-        } catch (error) {
-            if (error && error.name === "AbortError") {
-                return false;
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName,
+                    types: pickerTypes
+                });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                alert(`檔案已成功儲存：\n${fileHandle.name}`);
+                return true;
+            } catch (error) {
+                if (error && error.name === "AbortError") {
+                    return false;
+                }
+                console.warn("showSaveFilePicker error, falling back to direct download:", error);
             }
-            throw error;
         }
+
+        // 萬能相容備援方案：所有瀏覽器 (Chrome, Edge, Firefox, Safari, 手機) 均可無痛下載
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = suggestedName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return true;
     }
 
     if (isStaticMode) {
@@ -1415,7 +1423,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnAddNewPart) {
         btnAddNewPart.addEventListener("click", async () => {
             if (isStaticMode) {
-                alert("💡 提示：從單一 PDF 解析規格需要 Python 後端伺服器運行。\n\n在 GitHub 靜態展示頁面中，請使用上方『載入現有總表』直接選擇總表 Excel 載入數據！");
+                // 在 GitHub Pages 靜態展示模式下，直接開啟手動新增品號規格模態框
+                openEditModal(null);
                 return;
             }
             
