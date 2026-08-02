@@ -4,13 +4,10 @@ import time
 import io
 import json
 import webbrowser
-from threading import Timer
-import hashlib
 from flask import Flask, jsonify, request, render_template, send_file, session
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from openpyxl.utils import get_column_letter
 
 # 取得應用程式的基礎路徑（支援 PyInstaller 打包）
 def get_base_path():
@@ -44,13 +41,16 @@ def save_atomic(file_path, data):
 
 # Ensure workspace is in python path
 sys.path.append(BASE_PATH)
-from main import extract_data_from_pdf, _select_directory_dialog, _save_file_dialog, _select_files_dialog
+from main import extract_data_from_pdf, _select_directory_dialog, _select_files_dialog
 
 app = Flask(__name__, 
             static_folder=os.path.join(BASE_PATH, 'static'),
             template_folder=os.path.join(BASE_PATH, 'templates'))
 
-app.secret_key = "ppov_extractor_secret_key_123!"
+# 從環境變數讀取 session 簽章金鑰；未設定時使用開發用 fallback（並輸出警告）
+app.secret_key = os.environ.get("PPOV_SECRET_KEY", "ppov_extractor_secret_key_123!")
+if "PPOV_SECRET_KEY" not in os.environ:
+    print("WARNING: PPOV_SECRET_KEY 未設定，使用內建開發金鑰。生產環境請透過環境變數提供強隨機金鑰。")
 
 def admin_required(f):
     from functools import wraps
@@ -63,6 +63,9 @@ def admin_required(f):
 
 @app.route("/api/auth/elevate", methods=["POST"])
 def auth_elevate():
+    # 安全開關：設定 PPOV_DISABLE_ELEVATE=1 時停用「5 連擊解鎖管理員」功能
+    if os.environ.get("PPOV_DISABLE_ELEVATE", "").strip() in ("1", "true", "True"):
+        return jsonify({"success": False, "message": "管理員解鎖功能已停用"}), 403
     session["username"] = "admin"
     session["role"] = "admin"
     session["display_name"] = "系統管理員"
@@ -145,7 +148,8 @@ def select_folder():
             return jsonify({"success": True, "path": selected_path})
         return jsonify({"success": False, "message": "未選擇任何資料夾"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        print(f"API error (select_folder): {e}")
+        return jsonify({"success": False, "message": "操作失敗，請稍後再試"})
 
 @app.route("/api/db", methods=["GET"])
 def get_database():
@@ -317,7 +321,8 @@ def db_import_single_pdf():
             "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
         })
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        print(f"API error (db_import_single_pdf): {e}")
+        return jsonify({"success": False, "message": "匯入失敗，請稍後再試"})
 
 @app.route("/api/db/import_pdf_native", methods=["POST"])
 @admin_required
@@ -396,7 +401,8 @@ def db_import_pdf_native():
             "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
         })
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        print(f"API error (db_import_pdf_native): {e}")
+        return jsonify({"success": False, "message": "匯入失敗，請稍後再試"})
 
 @app.route("/api/extract", methods=["POST"])
 @admin_required
@@ -836,7 +842,8 @@ def load_master_file():
             "fields": [f["name"] for f in db["config"]["fields_to_extract"]] if db["config"] else []
         })
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        print(f"API error (load_master_file): {e}")
+        return jsonify({"success": False, "message": "載入失敗，請稍後再試"})
 
 
 
@@ -882,5 +889,6 @@ if __name__ == "__main__":
     import threading
     threading.Thread(target=wait_and_launch_browser, args=(port,), daemon=True).start()
 
-    # 3. 啟動 Flask 本地服務，禁用 use_reloader
-    app.run(port=port, debug=True, use_reloader=False)
+    # 3. 啟動 Flask 本地服務，禁用 use_reloader；debug 模式由 PPOV_DEBUG 環境變數控制（預設關閉）
+    debug_mode = os.environ.get("PPOV_DEBUG", "").strip() in ("1", "true", "True")
+    app.run(port=port, debug=debug_mode, use_reloader=False)

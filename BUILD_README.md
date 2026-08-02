@@ -33,22 +33,22 @@ PPOV-Extractor/dist/PPOV-Extractor.exe
 ## 開發者說明
 
 ### 重新打包
-如果需要重新打包，執行以下步驟：
+如果需要重新打包，使用專案根目錄的 `build.spec`（內含完整的 hiddenimports 設定）：
 
 1. 安裝 PyInstaller
 ```bash
 pip install pyinstaller
 ```
 
-2. 執行打包
+2. 執行打包（使用 build.spec 設定檔）
 ```bash
-pyinstaller --onefile --add-data "static;static" --add-data "templates;templates" --add-data "config.json;." --name "PPOV-Extractor" app.py
+pyinstaller build.spec
 ```
 
 3. 打包完成的檔案在 `dist/` 資料夾中
 
-### 打包設定
-- `--onefile`：打包成單一 .exe 檔案
-- `--add-data`：加入靜態資源、模板和設定檔
-- `--name`：指定輸出的檔案名稱
+### 打包設定（build.spec）
+- 產物名稱：`PPOV-Extractor.exe`
+- `datas`：加入 `static/`、`templates/` 與 `config.json`
+- `hiddenimports`：預先打包 `pdfplumber`、`pandas`、`openpyxl`、`flask`
 

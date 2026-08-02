@@ -1,0 +1,5 @@
+id,title,severity,timestamp,file
+vuln-0001,JWT Authentication Bypass via Hardcoded Secret,CRITICAL,2026-08-02 12:17:36 UTC,vulnerabilities/vuln-0001.md
+vuln-0002,IDOR - Insecure Direct Object Reference on Document Endpoints,HIGH,2026-08-02 12:17:46 UTC,vulnerabilities/vuln-0002.md
+vuln-0003,Information Disclosure via Detailed Error Messages,MEDIUM,2026-08-02 12:17:47 UTC,vulnerabilities/vuln-0003.md
+vuln-0004,Reflected Cross-Site Scripting (XSS) in Extract Endpoint,MEDIUM,2026-08-02 12:18:27 UTC,vulnerabilities/vuln-0004.md

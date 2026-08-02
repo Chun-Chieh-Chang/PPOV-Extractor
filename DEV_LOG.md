@@ -162,3 +162,21 @@
     3. **文檔與依賴同步**：同步更新 `System_Admin_Manual.html`、`DEV_LOG.md` 與 `wiki/log.md`，並執行 `INSTALL.ps1` 確保全域 IDE/AI 規則 100% 對齊。
   * **確效測試與基準點**：通過 `verify.ps1` 100% 軟體確效測試。 Git Commit: `1a77db4`
 
+
+* **全域優化作業：冗餘規則檔 / spec / DEV_LOG / 死碼清理 (2026-08-02)**：
+  * **需求與範圍**：依全域優化規則執行 MECE 整合整理，範圍僅含冗餘規則檔清理、重複 spec 合併、重複 DEV_LOG 同步、死碼清理。
+  * **RCA**：
+    1. 6 個規則檔（.cursorrules/.rules/.windsurfrules/CLAUDE.md/.antigravity.md/.clinerules）MD5 完全相同，重複維護。
+    2. build.spec 與 PPOV-Extractor.spec 重複，前者較完整（含 hiddenimports）。
+    3. docs/DEV_LOG.md 與根目錄 DEV_LOG.md 重複（僅差 1 byte 尾換行）。
+    4. app.py 含 4 個未使用 import（Timer/hashlib/get_column_letter/_save_file_dialog）。
+    5. tools/ 下 3 個獨立工具腳本（knowledge_bridge/rtk_ls/rtk_read）全專案無引用。
+  * **CAPA（零功能 Regression）**：
+    1. 6 個冗餘規則檔改為指向 AGENTS.md（單一來源），保留檔名供工具入口識別。
+    2. 合併 spec：刪除 PPOV-Extractor.spec，保留 build.spec（含 hiddenimports）。
+    3. docs/DEV_LOG.md 改為指向根目錄 DEV_LOG.md（單一來源）。
+    4. 移除 app.py 4 個未使用 import（py_compile 通過）。
+    5. 同步更新 BUILD_README.md（改用 build.spec 指令）與 docs/security/README.md（行號對齊）。
+    6. tools/ 3 個工具腳本：保留（獨立工具，非死碼）。
+  * **驗證**：`python -m py_compile app.py main.py verify_extraction.py` 通過；`node --check static/app.js` 通過。
+
