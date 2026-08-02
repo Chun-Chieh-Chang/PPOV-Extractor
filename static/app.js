@@ -332,7 +332,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // --- FOLDER PICKER CHANGE EVENT (HTML5 Browser Mode) ---
-    const inputFolder = document.getElementById("inputFolder");
     if (inputFolder) {
         inputFolder.addEventListener("change", (e) => {
             const files = Array.from(e.target.files || []);
