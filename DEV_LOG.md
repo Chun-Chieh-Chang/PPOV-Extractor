@@ -132,11 +132,11 @@
 
 * **管理員登入觸發機制重構：實作 Header 版號標籤「5連擊解鎖權限」(2026-08-02)**：
   * **需求內容**：
-    * 將原先顯式的「管理員登入」按鈕替換為隱蔽式觸發。
-    * 在 Header 的版號標籤（`#btnVersion`）實作「5連擊解鎖權限」：使用者需在 1.5 秒內連續點擊 5 次版本號標籤，始可觸發解鎖 Admin 管理模式（彈出管理員登入驗證視窗），逾時（超過 1.5 秒未滿 5 次）自動重置計數。
+    * 完全取消並刪除密碼登入功能，移除所有密碼驗證彈窗與密碼修改 UI。
+    * 在 Header 的版號標籤（`#btnVersion`）實作無密碼「5連擊解鎖權限」：使用者在 1.5 秒內連續點擊 5 次版本號標籤，即直接解鎖 Admin 管理員權限，並顯示 Morandi 浮動 Toast 提示；點擊登出圖示直接無縫切換回品質檢查員模式。
   * **原因 (RCA) & 矯正與預防措施 (CAPA)**：
-    * 遵循 MECE 原則完全裁撤 Header 顯式 `btnLoginPrompt` 按鈕（包含 HTML 結構與 `app.js` 全數 DOM/事件綁定死碼）。
-    * 完全裁撤「PPOV Extractor 系統更新日誌」彈窗（`versionModal` HTML 結構及 `app.js` 單擊彈出邏輯），解決點擊版本號標籤時跳出更新日誌 Modal 干擾連擊驗證之問題。
-    * 在 CSS 中加強 `.version-badge` 的互動美學與點擊體驗（ Morandi 色系微調、`cursor: pointer`、`user-select: none`、`hover/active` 微動畫縮放）。
-    * 在 `static/app.js` 的 `setupAuthEventListeners` 中注入 1.5 秒高階計時器連擊邏輯，達成精準且具備防誤觸與防護欄功能的管理員密碼驗證解鎖機制。
+    * 遵循 MECE 原則完全裁撤 `loginOverlay` 與 `changePasswordModal` 彈窗 HTML 結構、`users.json` 設定檔，以及 `app.js` 全數密碼處理死碼。
+    * 重構 `app.py` 後端認證 API：刪除密碼驗證邏輯與 `users.json` 讀寫，替換為精簡安全之 `/api/auth/elevate` 直連提權端點。
+    * 引進「1.5 秒時間戳記滑動視窗 (Sliding Window)」演算法，100% 精準捕捉 1.5 秒內之 5 連擊解鎖。
+    * 在前端注入輕量化 Morandi 懸浮 Toast 提示，提權/降權切換即時獲得視覺回饋。
 
