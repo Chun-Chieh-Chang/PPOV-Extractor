@@ -331,40 +331,66 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 
+    // --- FOLDER PICKER CHANGE EVENT (HTML5 Browser Mode) ---
+    const inputFolder = document.getElementById("inputFolder");
+    if (inputFolder) {
+        inputFolder.addEventListener("change", (e) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length === 0) return;
+
+            state.staticFolderFiles = files;
+            const firstRelPath = files[0].webkitRelativePath || "";
+            const folderName = firstRelPath ? firstRelPath.split("/")[0] : "已選擇本機資料夾";
+
+            state.folderPath = folderName;
+            txtCurrentFolder.textContent = `${folderName} (${files.length} 個檔案)`;
+            btnStartExtract.disabled = false;
+        });
+    }
+
     // --- BUTTON: SELECT FOLDER ---
     btnSelectFolder.addEventListener("click", async () => {
         if (isStaticMode) {
-            alert("💡 提示：本機資料夾選擇與 PDF 數據提取功能需要 Python 後端伺服器運行。\n\n在 GitHub 靜態展示頁面中，請使用上方『載入現有總表(Excel檔案)』直接選擇並分析解析後的檔案！");
+            if (inputFolder) {
+                inputFolder.value = "";
+                inputFolder.click();
+            }
             return;
         }
+
         try {
             const response = await fetch("/api/select_folder", { method: "POST" });
             const result = await response.json();
             if (result.success) {
                 state.folderPath = result.path;
+                state.staticFolderFiles = null;
                 txtCurrentFolder.textContent = result.path;
                 btnStartExtract.disabled = false;
             } else {
-                console.warn(result.message);
+                if (inputFolder) {
+                    inputFolder.value = "";
+                    inputFolder.click();
+                }
             }
         } catch (error) {
-            console.error("Error choosing folder:", error);
+            console.warn("Native folder picker fallback to HTML5 picker:", error);
+            if (inputFolder) {
+                inputFolder.value = "";
+                inputFolder.click();
+            }
         }
     });
 
     // --- BUTTON: START EXTRACTION ---
     btnStartExtract.addEventListener("click", async () => {
-        if (isStaticMode) return;
         if (!state.folderPath) return;
 
-        // Reset UI progress states
         btnSelectFolder.disabled = true;
         btnStartExtract.disabled = true;
         progressContainer.style.display = "block";
         progressFill.style.width = "0%";
         txtProgressPercent.textContent = "0%";
 
-        // Simulating loader step widths for responsive UI feedback
         let progress = 10;
         const progressTimer = setInterval(() => {
             if (progress < 90) {
@@ -372,8 +398,61 @@ document.addEventListener("DOMContentLoaded", () => {
                 progressFill.style.width = `${progress}%`;
                 txtProgressPercent.textContent = `${progress}%`;
             }
-        }, 300);
+        }, 150);
 
+        // GitHub Pages 靜態網頁模式 或 使用 HTML5 資料夾選擇器傳入檔案：由瀏覽器解析資料夾內的總表 (Excel/JSON)
+        if (isStaticMode || (state.staticFolderFiles && state.staticFolderFiles.length > 0)) {
+            setTimeout(async () => {
+                try {
+                    const files = state.staticFolderFiles || [];
+                    const masterFile = files.find(f => f.name.toLowerCase().endsWith(".json") || f.name.toLowerCase().endsWith(".xlsx"));
+
+                    if (masterFile) {
+                        if (masterFile.name.toLowerCase().endsWith(".json")) {
+                            const text = await masterFile.text();
+                            const parsed = JSON.parse(text);
+                            state.items = Array.isArray(parsed) ? parsed : (parsed.extracted_data || []);
+                        } else if (masterFile.name.toLowerCase().endsWith(".xlsx")) {
+                            const arrayBuffer = await masterFile.arrayBuffer();
+                            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const parsedData = XLSX.utils.sheet_to_json(firstSheet);
+                            state.items = parsedData;
+                        }
+                        
+                        renderMasterTable(state.items);
+                        badgeCount.textContent = state.items.length;
+                        if (state.items.length > 0) {
+                            masterExportGroup.style.display = "flex";
+                            inputSearch.disabled = false;
+                        }
+                        alert(`✅ 已成功從資料夾中解析彙總表 ${masterFile.name}（共 ${state.items.length} 筆規格）！`);
+                    } else {
+                        alert("💡 靜態網頁提示：資料夾內未發現現有彙總表 (.xlsx/.json)。\n\n如需直接從 PDF 掃描實體參數，請執行本機 Python 伺服器 (python app.py)；或在 GitHub Pages 使用『載入現有總表(Excel檔案)』按鈕！");
+                    }
+
+                    clearInterval(progressTimer);
+                    progressFill.style.width = "100%";
+                    txtProgressPercent.textContent = "100%";
+                    setTimeout(() => {
+                        progressContainer.style.display = "none";
+                        btnSelectFolder.disabled = false;
+                        btnStartExtract.disabled = false;
+                    }, 300);
+
+                } catch (err) {
+                    clearInterval(progressTimer);
+                    progressContainer.style.display = "none";
+                    btnSelectFolder.disabled = false;
+                    btnStartExtract.disabled = false;
+                    console.error("Folder parse error:", err);
+                    alert("資料夾解析失敗：請確認檔案格式是否正確！");
+                }
+            }, 400);
+            return;
+        }
+
+        // 本地 Flask 後端模式：100% 由 Python 後端 pdfplumber 實體解析硬碟 PDF 檔案
         try {
             const response = await fetch("/api/extract", {
                 method: "POST",
