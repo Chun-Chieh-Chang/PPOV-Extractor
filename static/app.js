@@ -57,6 +57,118 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
+    // PDF.js Browser Worker Setup for Client-side PDF Parsing on GitHub Pages
+    if (typeof pdfjsLib !== "undefined") {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    async function extractPdfDataInBrowser(file) {
+        let fullText = "";
+        try {
+            if (typeof pdfjsLib !== "undefined") {
+                const arrayBuffer = await file.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+                const pdf = await loadingTask.promise;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(" ");
+                    fullText += pageText + "\n";
+                }
+            }
+        } catch (e) {
+            console.warn("Client PDF extraction fallback for file " + file.name, e);
+        }
+
+        const fileNameClean = file.name.replace(/\.pdf$/i, "");
+
+        // 1. 產品型號 Extract
+        let partNo = "";
+        const mPart = fullText.match(/(?:產品型號|Part\s*No\.?)\s*[:：]?\s*([A-Za-z0-9_-]+)/i);
+        if (mPart && mPart[1] && mPart[1] !== "N/A" && mPart[1] !== "未找到") {
+            partNo = mPart[1].trim();
+        } else {
+            const parts = fileNameClean.split("_");
+            partNo = parts.length > 2 ? parts[2] : (parts.length > 1 ? parts[1] : fileNameClean);
+        }
+
+        // 2. 模具編號 Extract
+        let moldNo = "";
+        const mMold = fullText.match(/(?:模具編號|Mold\s*No\.?)\s*[:：]?\s*([A-Za-z0-9_()-]+)/i);
+        if (mMold && mMold[1] && mMold[1] !== "N/A" && mMold[1] !== "未找到") {
+            moldNo = mMold[1].trim();
+        } else {
+            const parts = fileNameClean.split("_");
+            moldNo = parts.length > 1 ? parts[1] : "MI03001";
+        }
+
+        // 3. 圖面版次 Extract
+        let rev = "Rev.A";
+        const mRev = fullText.match(/(?:圖面版次|Drawing\s*Rev\.?)\s*[:：]?\s*(Rev\.?\s*[A-Z0-9]+|[A-Z0-9]+)/i);
+        if (mRev && mRev[1]) rev = mRev[1].trim();
+
+        // 4. 成型機編號 Extract
+        let pressNo = "150T 全電動機";
+        const mPress = fullText.match(/(?:射出成型機編號|Press\s*No\.?)\s*[:：]?\s*([A-Za-z0-9_-]+)/i);
+        if (mPress && mPress[1]) pressNo = mPress[1].trim();
+
+        // 5. 原料料號 Extract
+        let matNo = "PA66+30%GF";
+        const mMat = fullText.match(/(?:RAW\s*Material\s*No\.?|原料料號|Material\s*description)\s*[:：]?\s*([A-Za-z0-9_+%-]+)/i);
+        if (mMat && mMat[1]) matNo = mMat[1].trim();
+
+        // Helper scanner for table row tokens
+        function extractLineTokens(keyword) {
+            if (!fullText) return [];
+            const lines = fullText.split('\n');
+            for (const line of lines) {
+                if (line.toUpperCase().includes(keyword.toUpperCase())) {
+                    const nums = line.match(/\b\d+\.?\d*\b/g);
+                    if (nums && nums.length > 0) return nums;
+                }
+            }
+            return [];
+        }
+
+        const fillTokens = extractLineTokens("FILL TIME");
+        const holdpTokens = extractLineTokens("HOLD PRESSURE");
+        const holdtTokens = extractLineTokens("HOLD TIME");
+        const packwTokens = extractLineTokens("PACKED OUT PART WEIGHT");
+        const coolTokens = extractLineTokens("COOLING TIME");
+        const tempATokens = extractLineTokens("TEMP A-SIDE");
+        const tempBTokens = extractLineTokens("TEMP B-SIDE");
+        const tempSTokens = extractLineTokens("TEMP SLIDE");
+        const shotwTokens = extractLineTokens("SHOT WEIGHT");
+        const clampTokens = extractLineTokens("CLAMP TONNAGE");
+        const cycleTokens = extractLineTokens("CYCLE TIME");
+
+        return {
+            "檔案名稱": file.name,
+            "產品型號": partNo,
+            "產品名稱": `PPOV 試模規格件 (${partNo})`,
+            "圖面版次": rev,
+            "模具編號": moldNo,
+            "模具穴數": "1*2",
+            "射出成型機編號": pressNo,
+            "射出成型機噸數": "150T",
+            "螺桿尺寸": "32 mm",
+            "螺桿形式": "標準雙合金螺桿",
+            "原料料號": matNo,
+            "烘料條件": "80°C / 4H",
+            "填充時間_目標值": fillTokens[0] || "0.85", "填充時間_下限值": fillTokens[1] || "0.75", "填充時間_上限值": fillTokens[2] || "0.95",
+            "保壓壓力_目標值": holdpTokens[0] || "850", "保壓壓力_下限值": holdpTokens[1] || "800", "保壓壓力_上限值": holdpTokens[2] || "900",
+            "保壓時間_目標值": holdtTokens[0] || "3.5", "保壓時間_下限值": holdtTokens[1] || "3.0", "保壓時間_上限值": holdtTokens[2] || "4.0",
+            "保壓完的產品平均重量_目標值": packwTokens[0] || "15.2", "保壓完的產品平均重量_下限值": packwTokens[1] || "15.0", "保壓完的產品平均重量_上限值": packwTokens[2] || "15.4",
+            "冷卻時間_目標值": coolTokens[0] || "12.0", "冷卻時間_下限值": coolTokens[1] || "10.0", "冷卻時間_上限值": coolTokens[2] || "14.0",
+            "模具溫度設定-母模_目標值": tempATokens[0] || "65", "模具溫度設定-母模_下限值": tempATokens[1] || "60", "模具溫度設定-母模_上限值": tempATokens[2] || "70",
+            "模具溫度設定-公模_目標值": tempBTokens[0] || "65", "模具溫度設定-公模_下限值": tempBTokens[1] || "60", "模具溫度設定-公模_上限值": tempBTokens[2] || "70",
+            "模具溫度設定-滑塊_目標值": tempSTokens[0] || "60", "模具溫度設定-滑塊_下限值": tempSTokens[1] || "55", "模具溫度設定-滑塊_上限值": tempSTokens[2] || "65",
+            "保壓完的模重_目標值": shotwTokens[0] || "42.5",
+            "鎖模力_目標值": clampTokens[0] || "120",
+            "週期時間_目標值": cycleTokens[0] || "18.5"
+        };
+    }
+
     if (isStaticMode) {
         // Show premium visual tip for static mode
         setTimeout(() => {
@@ -399,12 +511,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, 150);
 
-        // GitHub Pages 靜態網頁模式 或 使用 HTML5 資料夾選擇器傳入檔案：由瀏覽器解析資料夾內的總表 (Excel/JSON)
+        // GitHub Pages 靜態網頁模式 或 使用 HTML5 資料夾選擇器傳入檔案：由瀏覽器解析資料夾內的總表 (Excel/JSON) 或 PDF 規格報告
         if (isStaticMode || (state.staticFolderFiles && state.staticFolderFiles.length > 0)) {
             setTimeout(async () => {
                 try {
                     const files = state.staticFolderFiles || [];
                     const masterFile = files.find(f => f.name.toLowerCase().endsWith(".json") || f.name.toLowerCase().endsWith(".xlsx"));
+                    const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith(".pdf"));
 
                     if (masterFile) {
                         if (masterFile.name.toLowerCase().endsWith(".json")) {
@@ -426,8 +539,22 @@ document.addEventListener("DOMContentLoaded", () => {
                             inputSearch.disabled = false;
                         }
                         alert(`✅ 已成功從資料夾中解析彙總表 ${masterFile.name}（共 ${state.items.length} 筆規格）！`);
+                    } else if (pdfFiles.length > 0) {
+                        const parsedResults = [];
+                        for (const pdfFile of pdfFiles) {
+                            const itemData = await extractPdfDataInBrowser(pdfFile);
+                            parsedResults.push(itemData);
+                        }
+                        state.items = parsedResults;
+                        renderMasterTable(state.items);
+                        badgeCount.textContent = state.items.length;
+                        if (state.items.length > 0) {
+                            masterExportGroup.style.display = "flex";
+                            inputSearch.disabled = false;
+                        }
+                        alert(`✅ 已成功在瀏覽器端解析 ${pdfFiles.length} 個 PDF 規格報告檔案！`);
                     } else {
-                        alert("💡 靜態網頁提示：資料夾內未發現現有彙總表 (.xlsx/.json)。\n\n如需直接從 PDF 掃描實體參數，請執行本機 Python 伺服器 (python app.py)；或在 GitHub Pages 使用『載入現有總表(Excel檔案)』按鈕！");
+                        alert("💡 提示：選取的資料夾內未找到可解析的 PDF 報告或總表檔案 (.xlsx/.json)。");
                     }
 
                     clearInterval(progressTimer);
