@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPOV Extractor — 數據欄位映射邏輯基準參考</title>
+<style>
+  :root {
+    --bg: #F9FAFB;
+    --surface: #FFFFFF;
+    --text: #111827;
+    --text-secondary: #6B7280;
+    --accent: #3B82F6;
+    --accent-soft: #EFF6FF;
+    --success: #10B981;
+    --warning: #D97706;
+    --border: #E5E7EB;
+    --code-bg: #F3F4F6;
+    --shadow: 0 1px 3px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Inter", "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+
+  /* ---------- Layout ---------- */
+  .layout { display: flex; max-width: 1440px; margin: 0 auto; }
+  nav.sidebar {
+    position: sticky; top: 0; align-self: flex-start;
+    width: 264px; min-width: 264px; height: 100vh; overflow-y: auto;
+    padding: 24px 16px; border-right: 1px solid var(--border);
+    background: var(--surface);
+  }
+  nav.sidebar .logo { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  nav.sidebar .sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+  nav.sidebar a {
+    display: block; padding: 6px 10px; border-radius: 6px;
+    color: var(--text-secondary); text-decoration: none; font-size: 13px;
+    border-left: 2px solid transparent;
+  }
+  nav.sidebar a:hover { background: var(--accent-soft); color: var(--accent); }
+  nav.sidebar a.active { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+  nav.sidebar .group { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #9CA3AF; margin: 16px 0 6px; padding-left: 10px; }
+
+  main { flex: 1; min-width: 0; padding: 32px 40px 80px; }
+
+  /* ---------- Hero ---------- */
+  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-bottom: 28px; box-shadow: var(--shadow); }
+  .hero h1 { font-size: 22px; margin-bottom: 8px; }
+  .hero p.desc { color: var(--text-secondary); max-width: 860px; margin-bottom: 16px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+  .meta .chip { font-size: 13px; padding: 4px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); border: 1px solid #BFDBFE; }
+  .meta .chip.warn { background: #FFFBEB; color: var(--warning); border-color: #FDE68A; }
+  .meta .chip.ok { background: #ECFDF5; color: var(--success); border-color: #A7F3D0; }
+
+  /* ---------- Sections ---------- */
+  section.card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px 28px; margin-bottom: 24px; box-shadow: var(--shadow); scroll-margin-top: 16px;
+  }
+  section.card h2 { font-size: 18px; margin-bottom: 4px; }
+  section.card h2 .no { color: var(--accent); margin-right: 8px; }
+  section.card > p.lead { color: var(--text-secondary); margin-bottom: 16px; font-size: 13px; }
+  section.card h3 { font-size: 15px; margin: 20px 0 8px; }
+  section.card h4 { font-size: 14px; margin: 14px 0 6px; }
+
+  /* ---------- Pipeline ---------- */
+  .pipeline { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 16px 0; }
+  .pipe-box {
+    flex: 1; min-width: 120px; background: var(--accent-soft); border: 1px solid #BFDBFE;
+    border-radius: 8px; padding: 10px 12px; font-size: 13px;
+  }
+  .pipe-box b { display: block; color: var(--accent); font-size: 13px; margin-bottom: 2px; }
+  .pipe-box span { color: var(--text-secondary); font-size: 12px; }
+  .pipe-arrow { align-self: center; color: var(--text-secondary); font-weight: 700; }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface); }
+  thead th {
+    background: #F9FAFB; text-align: left; font-weight: 600; white-space: nowrap;
+    padding: 10px 12px; border-bottom: 2px solid var(--border); color: var(--text-secondary); font-size: 12px;
+  }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #F9FAFB; }
+  td.num { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; white-space: nowrap; }
+  kbd, code.inline { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; background: var(--code-bg); padding: 1px 6px; border-radius: 4px; }
+  .kw { color: var(--accent); }
+
+  /* ---------- Code ---------- */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6; margin: 10px 0;
+  }
+  pre .c { color: #6B7280; font-style: italic; }
+  pre .k { color: #7C3AED; font-weight: 600; }
+
+  /* ---------- Badges ---------- */
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  .b-table { background: #EFF6FF; color: #2563EB; }
+  .b-text { background: #ECFDF5; color: #059669; }
+  .b-mat { background: #FEF3C7; color: #B45309; }
+  .b-sys { background: #F3F4F6; color: #4B5563; }
+
+  /* ---------- Notes / callouts ---------- */
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 13px; }
+  .note.warn { border-color: var(--warning); background: #FFFBEB; }
+  .note.ok { border-color: var(--success); background: #ECFDF5; }
+
+  ul.clean { margin: 8px 0 8px 20px; }
+  ul.clean li { margin: 4px 0; }
+
+  /* ---------- Search ---------- */
+  .search-box { margin: 12px 0; position: relative; max-width: 420px; }
+  .search-box input {
+    width: 100%; padding: 9px 14px 9px 36px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; font-family: inherit; background: var(--surface); color: var(--text);
+  }
+  .search-box input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .search-box::before { content: "⌕"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 16px; }
+
+  .hide { display: none; }
+  .fcount { font-size: 12px; color: var(--text-secondary); margin-left: 8px; }
+
+  /* ---------- Footer ---------- */
+  footer { color: var(--text-secondary); font-size: 12px; padding: 16px 0 8px; border-top: 1px solid var(--border); margin-top: 24px; }
+
+  /* ---------- Print ---------- */
+  @media print {
+    nav.sidebar { display: none; }
+    main { padding: 0; }
+    body { background: #fff; }
+    section.card { box-shadow: none; break-inside: avoid; }
+  }
+  @media (max-width: 960px) {
+    .layout { flex-direction: column; }
+    nav.sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ================= SIDEBAR ================= -->
+  <nav class="sidebar">
+    <div class="logo">PPOV Extractor</div>
+    <div class="sub">數據欄位映射邏輯<br>基準參考文件</div>
+
+    <div class="group">基礎</div>
+    <a href="#sec-overview">1. 總覽與資料流</a>
+    <a href="#sec-arch">2. 映射架構</a>
+    <a href="#sec-record">3. 輸出紀錄結構</a>
+
+    <div class="group">提取方法</div>
+    <a href="#sec-fta">4. find_text_after</a>
+    <a href="#sec-fmn">5. find_material_number</a>
+    <a href="#sec-ftv">6. find_table_value</a>
+    <a href="#sec-fnv">7. find_nested_value（未使用）</a>
+    <a href="#sec-unit">8. 單位偵測</a>
+
+    <div class="group">欄位基準</div>
+    <a href="#sec-fields">9. 欄位總表（41 欄）</a>
+    <a href="#sec-naming">10. 命名慣例</a>
+    <a href="#sec-fallback">11. 回退值與特殊值</a>
+
+    <div class="group">下游與驗證</div>
+    <a href="#sec-downstream">12. 下游資料流</a>
+    <a href="#sec-verify">13. 基準驗證紀錄</a>
+    <a href="#sec-reserved">14. 預留／未使用項目</a>
+    <a href="#sec-ref">15. 原始碼參考</a>
+  </nav>
+
+  <!-- ================= MAIN ================= -->
+  <main>
+
+    <!-- HERO -->
+    <div class="hero">
+      <h1>數據欄位映射邏輯 — 基準參考</h1>
+      <p class="desc">本文件為 PPOV Extractor 的「PDF 文字 → 結構化欄位」映射邏輯唯一基準來源（Single Source of Truth）。後續任何提取規則、關鍵字、欄位命名或回退邏輯的更動，都應以本文件為對照基準，並同步更新文件。文件涵蓋 <code class="inline">config.json</code> 的欄位規則、<code class="inline">main.py</code> 的四種提取方法與單位偵測，以及下游匯出流程。</p>
+      <div class="meta">
+        <span class="chip">基準版本：v1.9.5（git commit fc60ec5）</span>
+        <span class="chip">文件日期：2026-08-05</span>
+        <span class="chip">欄位數：41 個設定欄位 + 2 個系統欄位</span>
+        <span class="chip ok">已驗證：6/4 與 8/5 匯出 SHA256 一致</span>
+      </div>
+    </div>
+
+    <!-- 1. OVERVIEW -->
+    <section class="card" id="sec-overview">
+      <h2><span class="no">1</span>總覽與資料流</h2>
+      <p class="lead">從 PDF 檔到最終 Excel／JSON 的完整資料流，映射邏輯發生在「文字 → 紀錄」階段。</p>
+      <div class="pipeline">
+        <div class="pipe-box"><b>PDF 檔案</b><span>pdfplumber 逐頁擷取</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box"><b>全文文字</b><span>各頁以換行符串接</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box"><b>規則引擎</b><span>config.json 41 條規則 + 4 種方法</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box"><b>結構化紀錄</b><span>43 個鍵值對（JSON）</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box"><b>匯出</b><span>Excel 總表／JSON ／前端渲染</span></div>
+      </div>
+      <h3>處理流程（extract_data_from_pdf, main.py:572）</h3>
+      <pre><code>1. <span class="k">讀取</span> PDF：pdfplumber 將所有頁面 extract_text() 以 "\n" 串接成 full_text
+2. <span class="k">偵測</span> 保壓壓力單位：detect_checked_unit() → kg/cm² 或 bar
+3. <span class="k">初始化</span> 紀錄：{ "檔案名稱": xxx.pdf, "_單位_保壓壓力": ... }
+4. <span class="k">遍歷</span> config["fields_to_extract"] 每條規則：
+   - 依 extraction_method 從 EXTRACTION_MAPPING 查表取得函式
+   - 有 parameters 時傳入（並附加 checked_unit）
+5. <span class="k">回填</span> 每個欄位的提取結果到紀錄</code></pre>
+      <div class="note">所有提取函式的共同回退值為 <code class="inline">"未找到"</code>；表格類數值允許的佔位值為 <code class="inline">NCA / NAC / N/A</code>。</div>
+    </section>
+
+    <!-- 2. ARCHITECTURE -->
+    <section class="card" id="sec-arch">
+      <h2><span class="no">2</span>映射架構</h2>
+      <p class="lead">映射完全由 <code class="inline">config.json</code> 驅動（設定驅動），程式碼不含任何寫死的欄位規則。</p>
+      <h3>規則結構（config.json → fields_to_extract[]）</h3>
+      <pre><code>{
+  <span class="k">"name"</span>: "保壓壓力_目標值",          // 輸出欄位名稱（資料鍵）
+  <span class="k">"keywords"</span>: ["保壓壓力 HOLD PRESSURE"], // 優先序關鍵字（中文在前、英文在後）
+  <span class="k">"extraction_method"</span>: "find_table_value", // 方法名，經 EXTRACTION_MAPPING 查表
+  <span class="k">"parameters"</span>: {                  // 選擇性
+    "column": "目標值",                  // 宣告欄（目前僅供標示，不參與邏輯）
+    "value_type": "target"               // 決定取哪個索引值
+  }
+}</code></pre>
+      <h3>方法分派表（EXTRACTION_MAPPING, main.py:228）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>方法名稱</th><th>對應函式</th><th>用途</th><th>目前使用數</th></tr></thead>
+          <tbody>
+            <tr><td class="num">find_text_after</td><td class="num">main.py:21</td><td>"Key: Value" 格式的基本欄位</td><td>10</td></tr>
+            <tr><td class="num">find_material_number</td><td class="num">main.py:158</td><td>原料料號專用（多種版面）</td><td>1</td></tr>
+            <tr><td class="num">find_table_value</td><td class="num">main.py:92</td><td>表格型參數（目標／下限／上限／實際）</td><td>30</td></tr>
+            <tr><td class="num">find_nested_value</td><td class="num">main.py:68</td><td>大標題下的子項目值</td><td>0（未使用）</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note warn">新增欄位只需修改 <code class="inline">config.json</code>；只有「新的版面格式」需要新增方法函式（並同時註冊到 EXTRACTION_MAPPING）。</div>
+    </section>
+
+    <!-- 3. RECORD STRUCTURE -->
+    <section class="card" id="sec-record">
+      <h2><span class="no">3</span>輸出紀錄結構</h2>
+      <p class="lead">每份 PDF 產出一筆紀錄，包含 2 個系統欄位 + 41 個設定欄位，共 43 個鍵。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>資料鍵</th><th>來源</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td class="num">檔案名稱</td><td>系統（main.py:677）</td><td>來源 PDF 的 basename，作為整筆紀錄的唯一識別鍵（app.py 依此覆蓋合併、刪除、查詢）</td></tr>
+            <tr><td class="num">_單位_保壓壓力</td><td>系統（detect_checked_unit）</td><td>勾稽結果：<code class="inline">kg/cm²</code> 或 <code class="inline">bar</code>，底線前綴代表系統欄位</td></tr>
+            <tr><td colspan="3"><code class="inline">產品型號</code> 至 <code class="inline">週期時間_目標值</code> 共 41 欄 — 見第 9 節欄位總表</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. find_text_after -->
+    <section class="card" id="sec-fta">
+      <h2><span class="no">4</span>find_text_after（Key: Value 格式）</h2>
+      <p class="lead">用於基本欄位：在全文行中尋找關鍵字，取出關鍵字「之後」的內容。適用 <code class="inline">"關鍵字: 值"</code> 版面。</p>
+      <h3>演算法（main.py:21）</h3>
+      <pre><code>對每個 keyword（依 config 順序，<span class="k">找到即回傳</span>）：
+  ▸ 方法一：逐行掃描
+    1. 找到含關鍵字的行 → 取關鍵字之後的文字
+    2. clean_val() 清理：
+       - 移除單位首碼，如 "(℃ / hr)"、"(J/hr)"
+       - 移除前導冒號／半形／全形空格
+    3. 同行為空 → 看下一行，若下一行開頭不是黑名單
+       （產品／模具／射出／原料／圖面）則取用
+  ▸ 方法二：正則捕捉（後備）
+    keyword \s*[:：]?\s* ( [^\n\r]+ )   → 取 group(1) 並清理結尾空白
+  ▸ 全部失敗 → 回傳 "未找到"</code></pre>
+      <h3>特性與注意事項</h3>
+      <ul class="clean">
+        <li>多個關鍵字是「OR」關係，依 <code class="inline">config.json</code> 內順序嘗試；中文關鍵字優先於英文。</li>
+        <li>「同一行後方無內容時取下一行」會跳過以 產品／模具／射出／原料／圖面 開頭的行（防止誤取隔壁區塊標題）。</li>
+        <li>單位首碼正則：<code class="inline">^\s*\([J℃\w]\s*/\s*\w+\)\s*</code>（大小寫不敏感）。</li>
+        <li>適用欄位：產品型號、產品名稱、圖面版次、模具編號、模具穴數、射出成型機編號、射出成型機噸數、螺桿尺寸、螺桿形式、烘料條件（共 10 欄）。</li>
+      </ul>
+    </section>
+
+    <!-- 5. find_material_number -->
+    <section class="card" id="sec-fmn">
+      <h2><span class="no">5</span>find_material_number（原料料號專用）</h2>
+      <p class="lead">專為「原料料號」設計的強化版提取，處理料號可能出現在關鍵字前、後或上下行的多種版面。</p>
+      <h3>演算法（main.py:158）</h3>
+      <pre><code>對每個 keyword：
+  1. 同關鍵字行後方文字（去除冒號空白）→ 若非「原料資訊/Material Information」即回傳
+  2. 下一行（非黑名單開頭）→ 回傳，並清除「原料資訊/Material Information」字首
+  3. 若下一行恰為「原料資訊」→ 檢查再下一行
+  4. 關鍵字<b>前方</b>文字 → 由後往前取 1~2 個詞組，
+     需同時含字母與數字（料號特徵）才回傳
+  5. 上一行（關鍵字前方為空時）→ 同樣需含字母＋數字
+  6. 正則捕捉 keyword \s*[:：]?\s* ([^\n\r]+)（後備）
+  ▸ 全部失敗 → "未找到"</code></pre>
+      <div class="note">黑名單開頭比 find_text_after 多兩項：<code class="inline">烘料</code>、<code class="inline">螺桿</code>。料號判定特徵為「含字母且含數字」。</div>
+    </section>
+
+    <!-- 6. find_table_value -->
+    <section class="card" id="sec-ftv">
+      <h2><span class="no">6</span>find_table_value（表格參數 — 核心方法）</h2>
+      <p class="lead">處理 目標值／下限值／上限值／實際值 四欄結構的表格參數，是目前使用最多的方法（30 個欄位），也是歷次修正重點。</p>
+
+      <h3>關鍵參數</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>參數</th><th>意義</th><th>值</th></tr></thead>
+          <tbody>
+            <tr><td class="num">value_type</td><td>決定取第幾個 token（唯一實際參與邏輯的參數）</td><td>target=0 / low=1 / high=2 / actual=3</td></tr>
+            <tr><td class="num">column</td><td>宣告用欄位名（不參與邏輯，見第 14 節）</td><td>目標值／下限值／上限值／實際值</td></tr>
+            <tr><td class="num">checked_unit</td><td>由引擎附加傳入（目前未使用，見第 14 節）</td><td>kg/cm² / bar</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>演算法（main.py:92）</h3>
+      <pre><code>對每個 keyword：
+  逐行掃描，找到含關鍵字的行 i
+
+  <span class="c"># 優先掃描視窗：[i, i+1, i-1, i+2, i-2, i+3]</span>
+  search_indices = [i, i+1, i-1, i+2, i-2, i+3]
+
+  <span class="c"># 單值參數判定（關鍵字含以下任一 → 視為單值）</span>
+  is_single_param = keyword 含 CYCLE / TONNAGE / SCREW DIA / MOLD CYCLE
+
+  <span class="c"># ── Phase 1：多 token 表格列 ──</span>
+  對視窗內每一行：
+    tokens = 正則 \b\d+\.?\d*\b | NCA | NAC | N/A  (不分大小寫)
+    若 tokens==6 且行含 '/' → 兩兩合併成 3 個 "a / b" token
+       （例："155 / 2269 150 / 2196 160 / 2342"）
+    若 tokens ≥ 3 且 非單值參數：
+        target → tokens[0]   low → tokens[1]
+        high   → tokens[2]   actual → tokens[3]
+
+  <span class="c"># ── Phase 2：單值參數後備（僅 target）──</span>
+  僅當 value_type == "target" 時：
+    Case A：關鍵字同一行後方第一個數字 token
+    Case B：視窗內某行「恰有 1 個 token」，且該行不含
+            衝突關鍵字（FILL/SHOT/PACKED/CLAMP/TONNAGE/CYCLE/MOLD，
+            自身關鍵字內含者除外）
+
+  ▸ 全部失敗 → "未找到"</code></pre>
+
+      <h3>實際範例（保壓壓力 155 / 2269）</h3>
+      <pre><code>PDF 行內容：  保壓壓力 HOLD PRESSURE  155 / 2269  150 / 2196  160 / 2342
+tokens:      ["155","2269","150","2196","160","2342"]  → 6 個且含 '/'
+合併後:      ["155 / 2269", "150 / 2196", "160 / 2342"]
+  target → "155 / 2269"     low → "150 / 2196"    high → "160 / 2342"</code></pre>
+
+      <h3>注意事項</h3>
+      <ul class="clean">
+        <li><b>視窗設計目的</b>：數值可能位於關鍵字行、下一行（常見）或上一行；視窗覆蓋 ±3 行內的可能位置。</li>
+        <li><b>單值參數</b>（週期時間、鎖模力等）僅有 1 個數值，若不排除會被 Phase 1 誤抓相鄰表格列的第一個數字 → 以 <code class="inline">is_single_param</code> 切換到 Phase 2 的嚴謹單值判定。</li>
+        <li><b>6 token 斜線合併</b>：PDF 表格常把「目標 155/2269」拆成兩行數字，此規則將其還原為成對值。</li>
+        <li>NCA／NAC／N/A 視為合法數值 token（保留原文，不回退）。</li>
+      </ul>
+    </section>
+
+    <!-- 7. find_nested_value -->
+    <section class="card" id="sec-fnv">
+      <h2><span class="no">7</span>find_nested_value（已註冊、未使用）</h2>
+      <p class="lead">處理「大標題 → 子標題 → 值」的巢狀結構，目前已註冊於分派表但 config.json 中沒有欄位使用。</p>
+      <pre><code>pattern = main_keyword .*? sub_keyword \s*[:：]?\s* (\S+)   (re.DOTALL)
+主關鍵字與子關鍵字所有組合逐一嘗試，成功即回傳</code></pre>
+      <div class="note">若要新增此類欄位，直接在 config.json 加入帶 <code class="inline">parameters.sub_keywords</code> 的規則即可，無需改程式。</div>
+    </section>
+
+    <!-- 8. UNIT DETECTION -->
+    <section class="card" id="sec-unit">
+      <h2><span class="no">8</span>單位偵測（detect_checked_unit, main.py:555）</h2>
+      <p class="lead">保壓壓力單位由 PDF 上的勾稽方塊（□／■）決定，結果寫入系統欄位 <code class="inline">_單位_保壓壓力</code>。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>PDF 版面</th><th>結果</th></tr></thead>
+          <tbody>
+            <tr><td class="num">□ Bar&nbsp;&nbsp;■ kg/cm2</td><td class="num">kg/cm²</td></tr>
+            <tr><td class="num">■ Bar&nbsp;&nbsp;□ kg/cm2</td><td class="num">bar</td></tr>
+            <tr><td class="num">無勾稽方塊或無法判定</td><td class="num">kg/cm²（預設）</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>判定規則</h3>
+      <ul class="clean">
+        <li>逐行尋找同時含 <code class="inline">□</code> 與 <code class="inline">■</code> 且含 Bar 的行。</li>
+        <li><code class="inline">■ kg</code> 或 <code class="inline">■kg</code> → <code class="inline">kg/cm²</code>；<code class="inline">■ Bar</code> 或 <code class="inline">■Bar</code> → <code class="inline">bar</code>。</li>
+      </ul>
+    </section>
+
+    <!-- 9. FIELD TABLE -->
+    <section class="card" id="sec-fields">
+      <h2><span class="no">9</span>欄位總表（41 個設定欄位）</h2>
+      <p class="lead">以下為 config.json 的完整規則基準。關鍵字依優先序排列（中文在前、英文在後）。</p>
+      <div class="search-box"><input type="text" id="fieldSearch" placeholder="搜尋欄位名稱或關鍵字…"></div>
+      <span class="fcount" id="fcount"></span>
+      <div class="table-wrap">
+        <table id="fieldTable">
+          <thead>
+            <tr><th style="width:42px">#</th><th>欄位名稱（輸出鍵）</th><th style="width:110px">方法</th><th>關鍵字（依優先序）</th><th style="width:110px">value_type</th></tr>
+          </thead>
+          <tbody>
+            <tr data-kw="產品型號 part no"><td>1</td><td class="num">產品型號</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">產品型號 Part No.</span>、Part No.</td><td class="num">—</td></tr>
+            <tr data-kw="產品名稱 description"><td>2</td><td class="num">產品名稱</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">產品名稱 Description</span>、Description</td><td class="num">—</td></tr>
+            <tr data-kw="圖面版次 drawing rev"><td>3</td><td class="num">圖面版次</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">產品圖面版次 Drawing Rev.</span>、Drawing Rev.</td><td class="num">—</td></tr>
+            <tr data-kw="模具編號 mold no"><td>4</td><td class="num">模具編號</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">模具編號Mold No.</span>、Mold No.</td><td class="num">—</td></tr>
+            <tr data-kw="模具穴數 cavitation"><td>5</td><td class="num">模具穴數</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">模具穴數 Cavitation</span>、Cavitation</td><td class="num">—</td></tr>
+            <tr data-kw="射出成型機編號 press no"><td>6</td><td class="num">射出成型機編號</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">射出成型機編號 Press No.</span>、Press No.</td><td class="num">—</td></tr>
+            <tr data-kw="射出成型機噸數 press tonnage ton"><td>7</td><td class="num">射出成型機噸數</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">射出成型機噸數 Press Tonnage ( ton )</span>、Press Tonnage ( ton )</td><td class="num">—</td></tr>
+            <tr data-kw="螺桿尺寸 screw diameter mm"><td>8</td><td class="num">螺桿尺寸</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">螺桿尺寸 Screw Diameter ( mm )</span>、Screw Diameter ( mm )</td><td class="num">—</td></tr>
+            <tr data-kw="螺桿形式 screw type"><td>9</td><td class="num">螺桿形式</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">螺桿形式 Screw type</span>、Screw type</td><td class="num">—</td></tr>
+            <tr data-kw="原料料號 material raw material no"><td>10</td><td class="num">原料料號</td><td><span class="badge b-mat">find_material_number</span></td><td><span class="kw">原料料號 Material description</span>、<span class="kw">原料料號 RAW Material No.</span>、Material description、RAW Material No.</td><td class="num">—</td></tr>
+            <tr data-kw="烘料條件 drying condition"><td>11</td><td class="num">烘料條件</td><td><span class="badge b-text">find_text_after</span></td><td><span class="kw">Drying Condition</span>、烘料條件</td><td class="num">—</td></tr>
+            <tr data-kw="填充時間 fill time"><td>12</td><td class="num">填充時間_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">填充時間 FILL TIME</span></td><td class="num">target</td></tr>
+            <tr data-kw="填充時間 fill time"><td>13</td><td class="num">填充時間_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">填充時間 FILL TIME</span></td><td class="num">low</td></tr>
+            <tr data-kw="填充時間 fill time"><td>14</td><td class="num">填充時間_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">填充時間 FILL TIME</span></td><td class="num">high</td></tr>
+            <tr data-kw="保壓壓力 hold pressure"><td>15</td><td class="num">保壓壓力_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓壓力 HOLD PRESSURE</span></td><td class="num">target</td></tr>
+            <tr data-kw="保壓壓力 hold pressure"><td>16</td><td class="num">保壓壓力_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓壓力 HOLD PRESSURE</span></td><td class="num">low</td></tr>
+            <tr data-kw="保壓壓力 hold pressure"><td>17</td><td class="num">保壓壓力_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓壓力 HOLD PRESSURE</span></td><td class="num">high</td></tr>
+            <tr data-kw="保壓時間 hold time"><td>18</td><td class="num">保壓時間_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓時間 HOLD TIME</span></td><td class="num">target</td></tr>
+            <tr data-kw="保壓時間 hold time"><td>19</td><td class="num">保壓時間_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓時間 HOLD TIME</span></td><td class="num">low</td></tr>
+            <tr data-kw="保壓時間 hold time"><td>20</td><td class="num">保壓時間_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓時間 HOLD TIME</span></td><td class="num">high</td></tr>
+            <tr data-kw="保壓完的產品平均重量 average packed out part weight"><td>21</td><td class="num">保壓完的產品平均重量_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓完的產品平均重量 AVERAGE PACKED OUT PART WEIGHT</span></td><td class="num">target</td></tr>
+            <tr data-kw="保壓完的產品平均重量 average packed out part weight"><td>22</td><td class="num">保壓完的產品平均重量_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓完的產品平均重量 AVERAGE PACKED OUT PART WEIGHT</span></td><td class="num">low</td></tr>
+            <tr data-kw="保壓完的產品平均重量 average packed out part weight"><td>23</td><td class="num">保壓完的產品平均重量_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">保壓完的產品平均重量 AVERAGE PACKED OUT PART WEIGHT</span></td><td class="num">high</td></tr>
+            <tr data-kw="冷卻時間 machine cooling time"><td>24</td><td class="num">冷卻時間_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">冷卻時間 MACHINE COOLING TIME</span></td><td class="num">target</td></tr>
+            <tr data-kw="冷卻時間 machine cooling time"><td>25</td><td class="num">冷卻時間_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">冷卻時間 MACHINE COOLING TIME</span></td><td class="num">low</td></tr>
+            <tr data-kw="冷卻時間 machine cooling time"><td>26</td><td class="num">冷卻時間_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">冷卻時間 MACHINE COOLING TIME</span></td><td class="num">high</td></tr>
+            <tr data-kw="模具溫度設定 母模 a-side"><td>27</td><td class="num">模具溫度設定-母模_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP A-SIDE</span>、模具溫度設定-母模</td><td class="num">target</td></tr>
+            <tr data-kw="模具溫度設定 母模 a-side"><td>28</td><td class="num">模具溫度設定-母模_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP A-SIDE</span>、模具溫度設定-母模</td><td class="num">low</td></tr>
+            <tr data-kw="模具溫度設定 母模 a-side"><td>29</td><td class="num">模具溫度設定-母模_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP A-SIDE</span>、模具溫度設定-母模</td><td class="num">high</td></tr>
+            <tr data-kw="模具溫度設定 母模 a-side"><td>30</td><td class="num">模具溫度設定-母模_實際值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP A-SIDE</span>、模具溫度設定-母模</td><td class="num">actual</td></tr>
+            <tr data-kw="模具溫度設定 公模 b-side"><td>31</td><td class="num">模具溫度設定-公模_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP B-SIDE</span>、模具溫度設定-公模</td><td class="num">target</td></tr>
+            <tr data-kw="模具溫度設定 公模 b-side"><td>32</td><td class="num">模具溫度設定-公模_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP B-SIDE</span>、模具溫度設定-公模</td><td class="num">low</td></tr>
+            <tr data-kw="模具溫度設定 公模 b-side"><td>33</td><td class="num">模具溫度設定-公模_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP B-SIDE</span>、模具溫度設定-公模</td><td class="num">high</td></tr>
+            <tr data-kw="模具溫度設定 公模 b-side"><td>34</td><td class="num">模具溫度設定-公模_實際值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP B-SIDE</span>、模具溫度設定-公模</td><td class="num">actual</td></tr>
+            <tr data-kw="模具溫度設定 滑塊 slide"><td>35</td><td class="num">模具溫度設定-滑塊_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP SLIDE</span>、模具溫度設定-滑塊</td><td class="num">target</td></tr>
+            <tr data-kw="模具溫度設定 滑塊 slide"><td>36</td><td class="num">模具溫度設定-滑塊_下限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP SLIDE</span>、模具溫度設定-滑塊</td><td class="num">low</td></tr>
+            <tr data-kw="模具溫度設定 滑塊 slide"><td>37</td><td class="num">模具溫度設定-滑塊_上限值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP SLIDE</span>、模具溫度設定-滑塊</td><td class="num">high</td></tr>
+            <tr data-kw="模具溫度設定 滑塊 slide"><td>38</td><td class="num">模具溫度設定-滑塊_實際值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD WATER TEMP SLIDE</span>、模具溫度設定-滑塊</td><td class="num">actual</td></tr>
+            <tr data-kw="保壓完的模重 packed out shot weight"><td>39</td><td class="num">保壓完的模重_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">PACKED OUT SHOT WEIGHT</span>、保壓完的模重</td><td class="num">target</td></tr>
+            <tr data-kw="鎖模力 clamp tonnage"><td>40</td><td class="num">鎖模力_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">CLAMP TONNAGE</span>、鎖模力</td><td class="num">target</td></tr>
+            <tr data-kw="週期時間 mold cycle time"><td>41</td><td class="num">週期時間_目標值</td><td><span class="badge b-table">find_table_value</span></td><td><span class="kw">MOLD CYCLE TIME</span>、週期時間</td><td class="num">target</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">表格參數共 30 欄：5 組 × 3 值（填充時間、保壓壓力、保壓時間、產品平均重量、冷卻時間）+ 3 組 × 4 值（母模、公模、滑塊的目標/下限/上限/實際）+ 3 個單值（保壓完的模重、鎖模力、週期時間）。</div>
+    </section>
+
+    <!-- 10. NAMING -->
+    <section class="card" id="sec-naming">
+      <h2><span class="no">10</span>命名慣例</h2>
+      <h3>表格參數欄位名（輸出鍵）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>後綴</th><th>value_type</th><th>意義</th><th>範例</th></tr></thead>
+          <tbody>
+            <tr><td class="num">_目標值</td><td class="num">target</td><td>目標值（第一個 token）</td><td>保壓壓力_目標值</td></tr>
+            <tr><td class="num">_下限值</td><td class="num">low</td><td>下限值（第二個 token）</td><td>保壓壓力_下限值</td></tr>
+            <tr><td class="num">_上限值</td><td class="num">high</td><td>上限值（第三個 token）</td><td>保壓壓力_上限值</td></tr>
+            <tr><td class="num">_實際值</td><td class="num">actual</td><td>實際值（第四個 token，僅模溫欄位有）</td><td>模具溫度設定-母模_實際值</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>規則</h3>
+      <ul class="clean">
+        <li>輸出鍵 = <code class="inline">參數名 + 後綴</code>；參數名與 config.json 的 keyword（中文部分）對應。</li>
+        <li>系統欄位以 <code class="inline">_</code> 開頭（<code class="inline">_單位_保壓壓力</code>），與業務欄位區隔。</li>
+        <li>匯出 Excel 時欄位順序 = <code class="inline">["檔案名稱"] + config 順序</code>（app.py:486），config.json 中的順序即為輸出欄位順序，新增欄位時請在「同參數群組」內插隊以保持版面。</li>
+      </ul>
+    </section>
+
+    <!-- 11. FALLBACK -->
+    <section class="card" id="sec-fallback">
+      <h2><span class="no">11</span>回退值與特殊值</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>值</th><th>產生情境</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td class="num">"未找到"</td><td>所有方法的最終回退</td><td>任何方法都取不到值時的字串回退值</td></tr>
+            <tr><td class="num">NCA / NAC / N/A</td><td>表格方法 token 解析</td><td>視為合法數值 token 原樣保留（代表規格未定義）</td></tr>
+            <tr><td class="num">"未知方法"</td><td>config 方法名不在分派表</td><td>extract_data_from_pdf 的防呆（main.py:699）</td></tr>
+            <tr><td class="num">"設定錯誤: 缺少子關鍵字"</td><td>find_nested_value 缺 sub_keywords</td><td>防呆回退</td></tr>
+            <tr><td class="num">kg/cm²（預設）</td><td>無法判定勾稽單位</td><td>detect_checked_unit 預設值</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note warn">回退值策略：字串欄位偏好「保留原樣」，數值欄位在無法判定時回退 <code class="inline">"未找到"</code>，不會做型別轉換或去尾。</div>
+    </section>
+
+    <!-- 12. DOWNSTREAM -->
+    <section class="card" id="sec-downstream">
+      <h2><span class="no">12</span>下游資料流</h2>
+      <p class="lead">映射結果（紀錄）在 app.py 中的使用方式，作為前端與匯出行為的基準。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>環節</th><th>邏輯</th><th>位置</th></tr></thead>
+          <tbody>
+            <tr><td>紀錄識別</td><td>以 <code class="inline">檔案名稱</code> 為唯一鍵：新增覆蓋、編輯、刪除、查詢皆依此鍵</td><td class="num">app.py:181-235, 304-305, 541</td></tr>
+            <tr><td>欄位清單</td><td><code class="inline">fields = [f.name for f in config.fields_to_extract]</code> 動態產生，前端欄位由後端回應驅動</td><td class="num">app.py:163, 321, 401, 448, 842</td></tr>
+            <tr><td>Excel 匯出</td><td>欄位順序 = 檔案名稱 + config 順序；openpyxl 寫出</td><td class="num">app.py:486-513</td></tr>
+            <tr><td>JSON 匯出／備份</td><td>整筆紀錄原樣輸出（含系統欄位）</td><td class="num">app.py:503, output/PPOV_Master_Table*.json</td></tr>
+            <tr><td>保壓壓力單位顯示</td><td>前端以 <code class="inline">_單位_保壓壓力</code> 渲染 X/Y 雙值（如 155 / 2269 kg/cm²）</td><td>static/app.js + templates/index.html</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 13. VERIFY -->
+    <section class="card" id="sec-verify">
+      <h2><span class="no">13</span>基準驗證紀錄</h2>
+      <div class="note ok">
+        <b>2026-08-05 驗證：</b><code class="inline">output/PPOV_Master_Table.json</code>（2026-06-04）與 <code class="inline">output/PPOV_Master_Table_0805.json</code>（2026-08-05）位元組完全一致（SHA256 = 4070C0F8…B1AAF6），249 筆紀錄 × 43 鍵。結論：<b>映射邏輯自 6/4 至 8/5 未變動</b>，本文件可作為 v1.9.5 的基準。
+      </div>
+      <h3>驗證 SOP（後續每次改動後執行）</h3>
+      <pre><code>1. python verify_extraction.py          # 既有擷取驗證
+2. 重新匯出總表 → 與上一版 JSON 比對 SHA256
+3. 檢查「未找到」筆數是否異常增加（映射回退診斷）
+4. 更新本文件「基準驗證紀錄」章節並註記 commit</code></pre>
+    </section>
+
+    <!-- 14. RESERVED -->
+    <section class="card" id="sec-reserved">
+      <h2><span class="no">14</span>預留／未使用項目</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>項目</th><th>現況</th><th>影響</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="num">parameters.column</td>
+              <td>find_table_value 只讀 <code class="inline">value_type</code>，<code class="inline">column</code> 目前不參與邏輯（僅宣告）</td>
+              <td>改動 column 值不會改變提取結果；未來若版面改成「以欄名定位」，此參數即為擴充點</td>
+            </tr>
+            <tr>
+              <td class="num">params.checked_unit</td>
+              <td>引擎將 <code class="inline">checked_unit</code> 附加進 parameters 傳入所有 find_table_value 呼叫（main.py:692），但函式目前未讀取</td>
+              <td>預留給「依單位切換解析規則」的擴充（例：bar / kg/cm² 雙單位格式）；勿移除傳遞</td>
+            </tr>
+            <tr>
+              <td class="num">find_nested_value</td>
+              <td>已註冊於 EXTRACTION_MAPPING，config.json 無欄位使用</td>
+              <td>新增巢狀欄位時無需改程式，於 config 加規則即可</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 15. SOURCE REF -->
+    <section class="card" id="sec-ref">
+      <h2><span class="no">15</span>原始碼參考（基準 commit fc60ec5）</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>符號</th><th>位置</th></tr></thead>
+          <tbody>
+            <tr><td class="num">find_text_after</td><td class="num">main.py:21</td></tr>
+            <tr><td class="num">find_nested_value</td><td class="num">main.py:68</td></tr>
+            <tr><td class="num">find_table_value</td><td class="num">main.py:92</td></tr>
+            <tr><td class="num">find_material_number</td><td class="num">main.py:158</td></tr>
+            <tr><td class="num">EXTRACTION_MAPPING</td><td class="num">main.py:228</td></tr>
+            <tr><td class="num">detect_checked_unit</td><td class="num">main.py:555</td></tr>
+            <tr><td class="num">extract_data_from_pdf</td><td class="num">main.py:572</td></tr>
+            <tr><td class="num">欄位規則設定</td><td class="num">config.json（fields_to_extract，41 條）</td></tr>
+            <tr><td class="num">匯出欄位順序</td><td class="num">app.py:486</td></tr>
+            <tr><td class="num">records 唯一鍵（檔案名稱）</td><td class="num">app.py:304-305, 369, 541</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      基準參考文件 · PPOV Extractor v1.9.5（fc60ec5）· 2026-08-05 生成 · 以 config.json + main.py 實作內容為準；文件與程式不一致時以本文件為對照基準並優先修正程式。
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  // ---- Scrollspy for sidebar ----
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.sidebar a'));
+  var sections = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  function onScroll() {
+    var pos = window.scrollY + 120;
+    var current = null;
+    sections.forEach(function (s) {
+      if (s && s.offsetTop <= pos) current = s;
+    });
+    links.forEach(function (a) {
+      a.classList.toggle('active', current && a.getAttribute('href') === '#' + current.id);
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ---- Field table search ----
+  var input = document.getElementById('fieldSearch');
+  var table = document.getElementById('fieldTable');
+  var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+  var count = document.getElementById('fcount');
+  function updateCount() {
+    var visible = rows.filter(function (r) { return !r.classList.contains('hide'); }).length;
+    count.textContent = visible + ' / ' + rows.length + ' 個欄位';
+  }
+  input.addEventListener('input', function () {
+    var q = input.value.trim().toLowerCase();
+    rows.forEach(function (r) {
+      var match = !q || r.getAttribute('data-kw').indexOf(q) !== -1 || r.textContent.toLowerCase().indexOf(q) !== -1;
+      r.classList.toggle('hide', !match);
+    });
+    updateCount();
+  });
+  updateCount();
+})();
+</script>
+</body>
+</html>
