@@ -1,4 +1,3 @@
-
 # -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
@@ -33,12 +32,9 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='PPOV-Extractor-20260805',
-    version='version_info.txt',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -52,4 +48,16 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=None,
+    version='version_info.txt',
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='PPOV-Extractor-20260805',
 )
