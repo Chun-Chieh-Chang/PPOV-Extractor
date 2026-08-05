@@ -13,7 +13,7 @@ PPOV Extractor extracts molding/process reference parameters from PPOV PDF files
 |-- main.py                 # PDF extraction logic and native dialog helpers
 |-- config.json             # Extraction field definitions
 |-- index.html              # Static GitHub Pages entrypoint
-|-- templates/index.html    # Flask-rendered UI template, kept in sync with index.html
+|-- templates/index.html    # Flask-rendered UI template; MUST be kept byte-identical to index.html (Flask serves templates/, GitHub Pages serves root/)
 |-- static/                 # Browser JavaScript and CSS
 |-- docs/                   # Development and maintenance documentation
 |-- .github/workflows/      # GitHub Pages deployment workflow

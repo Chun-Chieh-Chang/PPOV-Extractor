@@ -180,3 +180,21 @@
     6. tools/ 3 個工具腳本：保留（獨立工具，非死碼）。
   * **驗證**：`python -m py_compile app.py main.py verify_extraction.py` 通過；`node --check static/app.js` 通過。
 
+
+* **整體程式碼與檔案優化作業：死碼清理與警告歸零 (2026-08-05)**：
+  * **需求與範圍**：執行專案整體程式碼與檔案優化；範圍為 Python/JS 死碼清理、lint 警告歸零、雙份前端檔案維護文件化。
+  * **RCA（pyflakes + 結構掃描）**：
+    1. `main.py` 的 `_save_file_dialog`（88 行）全專案無任何呼叫者，為死碼（含函式內 `os` import）。
+    2. `main.py` 依賴檢查區塊重複 import `pdfplumber`（頂部已匯入），且 `openpyxl` 於 `main()` 內綁定後未使用 → pyflakes 警告。
+    3. `app.py` 的 `double_bottom`、`right_align` 兩個 openpyxl 樣式變數被指派但從未使用。
+    4. 6 處 f-string 無佔位符（app.py:215/220/240/245/879、main.py:719）→ lint 警告。
+    5. 根目錄 `index.html` 與 `templates/index.html` 為位元組相同之雙份檔案（Flask 需 templates/、GitHub Pages 需根目錄），屬必要重複但無同步說明。
+  * **CAPA（零功能 Regression）**：
+    1. 刪除 `main.py` 死碼 `_save_file_dialog`（-88 行）。
+    2. 依賴檢查改用 `importlib.util.find_spec("openpyxl")`，保留檢查意義、消除名稱遮蔽警告。
+    3. 刪除 `app.py` 未使用變數 `double_bottom`、`right_align`。
+    4. 6 處無佔位符 f-string 改為一般字串。
+    5. `README.md` 註記雙份 index.html 之同步維護要求（MUST be byte-identical）。
+  * **驗證**：`pyflakes` 零警告；`py_compile` 通過；`node --check` 通過；`verify.ps1` 100% 通過；`verify_extraction.py` ALL TESTS PASSED；伺服器重啟後 `/api/config`（41 欄）、`/api/db` 正常；映射基準（6/4 vs 8/5 SHA256）不受影響。
+
+

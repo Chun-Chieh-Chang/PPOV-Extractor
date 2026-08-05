@@ -359,95 +359,6 @@ def _select_directory_dialog(title: str, initial_dir: str = None) -> str:
         except Exception:
             return ""
 
-def _save_file_dialog(title: str, default_filename: str, file_types: list) -> str:
-    """顯示檔案儲存對話框，返回使用者選擇的檔案路徑；取消則返回空字串。"""
-    import subprocess
-    import sys
-    import os
-
-    is_frozen = getattr(sys, 'frozen', False)
-
-    if sys.platform == "win32":
-        try:
-            filter_parts = []
-            for name, ext in file_types:
-                filter_parts.append(f"{name} ({ext})|{ext}")
-            filter_str = "|".join(filter_parts)
-
-            ps_script = (
-                "Add-Type -AssemblyName System.Windows.Forms;"
-                "$d = New-Object System.Windows.Forms.SaveFileDialog;"
-                f"$d.Title = {repr(title)};"
-                f"$d.FileName = {repr(default_filename)};"
-                f"$d.Filter = {repr(filter_str)};"
-                "$form = New-Object System.Windows.Forms.Form;"
-                "$form.TopMost = $true;"
-                "$form.Width = 1; $form.Height = 1; $form.Opacity = 0;"
-                "$form.Show();"
-                "$form.Activate();"
-                "if ($d.ShowDialog($form) -eq 'OK') { Write-Output $d.FileName };"
-                "$form.Close();"
-            )
-            cmd = ["powershell", "-STA", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script]
-            creationflags = 0x08000000  # CREATE_NO_WINDOW
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=True,
-                creationflags=creationflags
-            )
-            path = result.stdout.strip()
-            if path:
-                return path
-            return ""
-        except Exception as e:
-            print(f"PowerShell save dialog error: {e}")
-            if is_frozen:
-                return ""
-
-    if is_frozen:
-        return ""
-
-    try:
-        # 用獨立的 python 子進程開啟 tkinter filedialog.asksaveasfilename
-        file_types_str = str(file_types)
-        cmd = [
-            sys.executable,
-            "-c",
-            "import tkinter as tk; "
-            "from tkinter import filedialog; "
-            "root = tk.Tk(); "
-            "root.withdraw(); "
-            "root.attributes('-topmost', True); "
-            f"print(filedialog.asksaveasfilename(title={repr(title)}, initialfile={repr(default_filename)}, filetypes={file_types_str}))"
-        ]
-        creationflags = 0
-        if sys.platform == "win32":
-            creationflags = 0x08000000
-            
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True,
-            creationflags=creationflags
-        )
-        return result.stdout.strip()
-    except Exception as e:
-        print(f"Subprocess asksaveasfilename error: {e}")
-        if not _TK_AVAILABLE:
-            return ""
-        try:
-            root = _tk.Tk()
-            root.withdraw()
-            root.attributes('-topmost', True)
-            path = _filedialog.asksaveasfilename(title=title, initialfile=default_filename, filetypes=file_types)
-            root.destroy()
-            return path or ""
-        except Exception:
-            return ""
-
 def _select_files_dialog(title: str, initial_dir: str = None, file_types: list = None) -> list:
     """顯示檔案選擇彈窗，支援多選，返回使用者選擇的檔案路徑列表；取消則返回空列表。"""
     import subprocess
@@ -716,7 +627,7 @@ def main():
     # 自動生成不重複的檔名
     OUTPUT_FILENAME = generate_unique_filename(OUTPUT_FOLDER, "extracted_data", "xlsx")
     
-    print(f"\n使用設定：")
+    print("\n使用設定：")
     print(f"  輸入資料夾: {PDF_FOLDER}")
     print(f"  輸出資料夾: {OUTPUT_FOLDER}")
     print(f"  設定檔: {CONFIG_PATH}")
@@ -800,12 +711,9 @@ def main():
 
 
 if __name__ == "__main__":
-    # 安裝所需套件的提示
-    try:
-        import pandas
-        import openpyxl
-        import pdfplumber
-    except ImportError:
+    # 安裝所需套件的提示（pandas 已於頂部確認可匯入；openpyxl 為 Excel 寫出引擎所需）
+    import importlib.util
+    if importlib.util.find_spec("openpyxl") is None:
         print("="*60)
         print("錯誤：缺少必要的 Python 套件。")
         print("請在你的終端機或命令提示字元中執行以下指令來安裝：")

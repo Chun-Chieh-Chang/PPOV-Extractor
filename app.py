@@ -212,12 +212,12 @@ def db_edit_record():
             break
             
     if not found:
-        return jsonify({"success": False, "message": f"在資料庫中找不到對應的規格記錄" if filename else f"在資料庫中找不到品號 {part_no}"})
+        return jsonify({"success": False, "message": ("在資料庫中找不到對應的規格記錄" if filename else f"在資料庫中找不到品號 {part_no}")})
         
     save_db_to_file()
     return jsonify({
         "success": True, 
-        "message": f"規格修改成功", 
+        "message": "規格修改成功", 
         "data": db["extracted_data"]
     })
 
@@ -237,12 +237,12 @@ def db_delete_record():
         db["extracted_data"] = [item for item in db["extracted_data"] if item.get("產品型號") != part_no]
     
     if len(db["extracted_data"]) == initial_len:
-        return jsonify({"success": False, "message": f"在資料庫中找不到該規格記錄"})
+        return jsonify({"success": False, "message": "在資料庫中找不到該規格記錄"})
         
     save_db_to_file()
     return jsonify({
         "success": True, 
-        "message": f"規格刪除成功", 
+        "message": "規格刪除成功", 
         "data": db["extracted_data"]
     })
 
@@ -571,12 +571,9 @@ def export_part_excel():
         top=Side(style='thin', color='B4D8E7'),
         bottom=Side(style='thin', color='B4D8E7')
     )
-    double_bottom = Border(bottom=Side(style='double', color='1A3A5F'))
-    
     # Alignments
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
-    right_align = Alignment(horizontal="right", vertical="center")
     
     # Title Block will be formatted at Row 1
         
@@ -876,7 +873,7 @@ if __name__ == "__main__":
 
     # 1. 檢查埠位是否已被另一個正在運行的實例佔用
     if is_port_in_use(port):
-        print(f"PPOV Extractor 服務已在運行中。正在引導至網頁頁面...")
+        print("PPOV Extractor 服務已在運行中。正在引導至網頁頁面...")
         webbrowser.open(f"http://127.0.0.1:{port}")
         sys.exit(0)
 
